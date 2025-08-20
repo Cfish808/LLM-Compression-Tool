@@ -1,15 +1,17 @@
 import torch
 from torch.utils.data import DataLoader
 import lm_eval
-from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer  # Add required imports
+from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, logger  # Add required imports
 from abc import ABCMeta, abstractmethod
-from .utils.regaster import  QUANTIZATION_REGISTRY
+
+from utils.load_dataset import BaseDataset
+from utils.regaster import  QUANTIZATION_REGISTRY
+from utils.load_model import BaseModel
 
 
-
-@QUANTIZATION_REGISTRY
 class QuantizationBase(metaclass=ABCMeta):
     def __init__(self, config, **kwargs):
+        self.dataset = None
         self.config = config
         self.model_type = self.config.model.type
         self.model_path = self.config.model.path
@@ -17,38 +19,14 @@ class QuantizationBase(metaclass=ABCMeta):
         self.model = None  # 子类加载具体模型
         self.tokenizer = None  # 子类加载具体tokenizer
         self.kwargs = kwargs
+        self.baseDataset=BaseDataset(self.config["data"],self.config["base"]["seed"])
 
-    def get_loader(self, dataset, batch_size=1, shuffle=False):
+
+    def get_loader(self):
         # 加载数据，可以是本地加载也可以是联网下载，返回时处理好的数据
-        return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)  
-    def build_model(self):
-            self.model_config = AutoConfig.from_pretrained(
-                self.model_path, trust_remote_code=True
-            )
-            if not self.use_cache:
-                if hasattr(self.model_config, 'use_cache'):
-                    self.model_config.use_cache = False
+        self.dataset = self.baseDataset.get_calib_data()
+        return self.dataset
 
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_path,
-                config=self.model_config,
-                device_map=self.device_map,
-                trust_remote_code=True,
-                torch_dtype=self.torch_dtype,
-                low_cpu_mem_usage=True,
-            )
-    def build_tokenizer(self):
-        if self.model_type not in ['Vit', 'WanT2V', 'WanI2V']:
-            assert self.tokenizer_mode in ['fast', 'slow']
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path, use_fast=self.tokenizer_mode, trust_remote_code=True
-            )
-            if 'Intern' in self.model_type:
-                self.tokenizer.padding_side = 'left'
-            if self.tokenizer.pad_token is None:
-                self.tokenizer.pad_token = self.tokenizer.eos_token
-        else:
-            self.tokenizer = None
 
     @abstractmethod
     def quantize(self):
@@ -68,6 +46,29 @@ class QuantizationBase(metaclass=ABCMeta):
             device=device
         )
         return results
+    def contiguous_params(self):
+        if self.model.mm_model is not None:
+            for name, param in self.model.mm_model.named_parameters():
+                if not param.is_contiguous():
+                    param.data = param.data.contiguous()
+
+            for name, param in self.model.mm_model.named_buffers():
+                if not param.is_contiguous():
+                    param.data = param.data.contiguous()
+        else:
+            for name, param in self.model.model.named_parameters():
+                if not param.is_contiguous():
+                    param.data = param.data.contiguous()
+
+            for name, param in self.model.model.named_buffers():
+                if not param.is_contiguous():
+                    param.data = param.data.contiguous()
+    def copy_tokenizer(self, path):
+        if self.model.tokenizer is not None:
+            self.model.tokenizer.save_pretrained(path)
+            logger.info('copy tokenizer done --')
+        else:
+            logger.info('no tokenizer, skip --')
 
     def save(self, save_path="quantized_model"):
         # 保存模型的方法
@@ -75,8 +76,6 @@ class QuantizationBase(metaclass=ABCMeta):
         # self.model.save_pretrained(save_path)
         # self.tokenizer.save_pretrained(save_path)
         # print(f"模型已保存到 {save_path}")
-
-
         self.contiguous_params()
         if self.config.model.type in ['Llava', 'InternVL2', 'Mllama', 'Qwen2vl']:
             self.model.vlm_model.language_model = self.model.get_model()
