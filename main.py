@@ -1,3 +1,11 @@
+import argparse
+import sys
+import time
+from venv import logger
+from easydict import EasyDict
+from utils.regaster import  QUANTIZATION_REGISTRY
+
+import yaml
 from quantization import *
 
 
@@ -12,14 +20,10 @@ if __name__ == "__main__":
         config = yaml.safe_load(file)
     config = EasyDict(config)
 
-    blockwise_opt = ALGO_REGISTRY[modality_config.method](
-        model,
-        modality_config,
-        input=None,
-        padding_mask=None,
-        config=config,
+    blockwise_opt = QUANTIZATION_REGISTRY[config.model.type](
+        config=config
     )
 
-    quantizaion = blockwise_opt.quantize()
+    blockwise_opt.build_model()
 
 
