@@ -1,17 +1,25 @@
 import argparse
-import sys
 import time
-from venv import logger
 from easydict import EasyDict
 from utils.regaster import  QUANTIZATION_REGISTRY
-
+import logging
 import yaml
-from quantization import *
 
 
 if __name__ == "__main__":
-    logger.add(sys.stdout, level='INFO')
+    # 创建 logger
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    # 控制台输出 handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    # 格式
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(formatter)
+    # 添加 handler
+    logger.addHandler(console_handler)
     llmc_start_time = time.time()
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, required=True)
     args = parser.parse_args()
