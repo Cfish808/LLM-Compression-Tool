@@ -695,33 +695,65 @@ class GPTQForCausalLM(nn.Module, PushToHubMixin):
 
         return cls(model, False, quantize_config)
 
+    # @classmethod
+    # def from_quantized_back(
+    #         cls,
+    #         model_name_or_path: Optional[str],
+    #         device_map: Optional[Union[str, Dict[str, Union[int, str]]]] = None,
+    #         max_memory: Optional[dict] = None,
+    #         device: Optional[Union[str, int]] = None,
+    #         low_cpu_mem_usage: bool = False,
+    #         use_triton: bool = False,
+    #         use_qigen: bool = False,
+    #         use_marlin: bool = False,
+    #         torch_dtype: Optional[torch.dtype] = None,
+    #         inject_fused_attention: bool = False,
+    #         inject_fused_mlp: bool = False,
+    #         use_cuda_fp16: bool = True,
+    #         quantize_config: Optional[BaseQuantizeConfig] = None,
+    #         model_basename: Optional[str] = None,
+    #         use_safetensors: bool = True,
+    #         trust_remote_code: bool = False,
+    #         warmup_triton: bool = False,
+    #         trainable: bool = False,
+    #         disable_exllama: Optional[bool] = None,
+    #         disable_exllamav2: bool = False,
+    #         use_tritonv2: bool = False,
+    #         checkpoint_format: Optional[str] = None,
+    #         **kwargs,
+    # ):
+
     @classmethod
     def from_quantized_back(
-            cls,
-            model_name_or_path: Optional[str],
-            device_map: Optional[Union[str, Dict[str, Union[int, str]]]] = None,
-            max_memory: Optional[dict] = None,
-            device: Optional[Union[str, int]] = None,
-            low_cpu_mem_usage: bool = False,
-            use_triton: bool = False,
-            use_qigen: bool = False,
-            use_marlin: bool = False,
-            torch_dtype: Optional[torch.dtype] = None,
-            inject_fused_attention: bool = False,
-            inject_fused_mlp: bool = False,
-            use_cuda_fp16: bool = True,
-            quantize_config: Optional[BaseQuantizeConfig] = None,
-            model_basename: Optional[str] = None,
-            use_safetensors: bool = True,
-            trust_remote_code: bool = False,
-            warmup_triton: bool = False,
-            trainable: bool = False,
-            disable_exllama: Optional[bool] = None,
-            disable_exllamav2: bool = False,
-            use_tritonv2: bool = False,
-            checkpoint_format: Optional[str] = None,
-            **kwargs,
-    ):
+                cls,
+
+                # model_name_or_path: Optional[str],
+                device_map: Optional[Union[str, Dict[str, Union[int, str]]]] = None,
+                max_memory: Optional[dict] = None,
+                config: AutoConfig = None,
+                is_sharded:bool = False,
+                device: Optional[Union[str, int]] = None,
+                low_cpu_mem_usage: bool = False,
+                use_triton: bool = False,
+                use_qigen: bool = False,
+                use_marlin: bool = False,
+                torch_dtype: Optional[torch.dtype] = None,
+                inject_fused_attention: bool = False,
+                inject_fused_mlp: bool = False,
+                use_cuda_fp16: bool = True,
+                quantize_config: Optional[BaseQuantizeConfig] = None,
+                model_save_name: str = None,
+                use_safetensors: bool = True,
+                trust_remote_code: bool = False,
+                warmup_triton: bool = False,
+                trainable: bool = False,
+                disable_exllama: Optional[bool] = None,
+                disable_exllamav2: bool = False,
+                use_tritonv2: bool = False,
+                checkpoint_format: Optional[str] = None,
+                **kwargs,
+        ):
+        # cls=self
         """load quantized model from local disk"""
         # If disable_exllamav2 is True, we want to fall back on the exllama kernel and not the cuda/cuda_old ones.
         if disable_exllama is None:
@@ -807,22 +839,22 @@ class GPTQForCausalLM(nn.Module, PushToHubMixin):
             disable_exllama = True
 
         # == step1: prepare configs and file names == #
-        config = AutoConfig.from_pretrained(
-            model_name_or_path,
-            trust_remote_code=trust_remote_code,
-            **cached_file_kwargs,
-        )
+        # config = AutoConfig.from_pretrained(
+        #     model_name_or_path,
+        #     trust_remote_code=trust_remote_code,
+        #     **cached_file_kwargs,
+        # )
 
         if config.model_type not in SUPPORTED_MODELS:
             raise TypeError(f"{config.model_type} isn't supported yet.")
 
-        if quantize_config is None:
-            quantize_config = BaseQuantizeConfig.from_pretrained(model_name_or_path,
-                                                                 checkpoint_format=checkpoint_format,
-                                                                 **cached_file_kwargs, **kwargs)
-        else:
-            if not isinstance(quantize_config, BaseQuantizeConfig):
-                quantize_config = BaseQuantizeConfig.from_quant_config(quantize_config, checkpoint_format)
+        # if quantize_config is None:
+        #     quantize_config = BaseQuantizeConfig.from_pretrained(model_name_or_path,
+        #                                                          checkpoint_format=checkpoint_format,
+        #                                                          **cached_file_kwargs, **kwargs)
+        # else:
+        #     if not isinstance(quantize_config, BaseQuantizeConfig):
+        #         quantize_config = BaseQuantizeConfig.from_quant_config(quantize_config, checkpoint_format)
 
         if quantize_config.checkpoint_format == CHECKPOINT_FORMAT.MARLIN:
             # format marlin requires marlin kernel
@@ -839,18 +871,18 @@ class GPTQForCausalLM(nn.Module, PushToHubMixin):
                     "You passed a model that is compatible with the Marlin int4*fp16 GPTQ kernel but use_marlin is False. We recommend using `use_marlin=True` to use the optimized Marlin kernels for inference. Example: `model = AutoGPTQForCausalLM.from_quantized(..., use_marlin=True)`."
                 )
 
-        if model_basename is None:
-            if quantize_config.model_file_base_name:
-                possible_model_basenames = [quantize_config.model_file_base_name]
-            else:
-                possible_model_basenames = [
-                    f"gptq_model-{quantize_config.bits}bit-{quantize_config.group_size}g",
-                    "model",
-                ]
-        else:
-            possible_model_basenames = [model_basename]
-
-        quantize_config.model_name_or_path = model_name_or_path
+        # if model_basename is None:
+        #     if quantize_config.model_file_base_name:
+        #         possible_model_basenames = [quantize_config.model_file_base_name]
+        #     else:
+        #         possible_model_basenames = [
+        #             f"gptq_model-{quantize_config.bits}bit-{quantize_config.group_size}g",
+        #             "model",
+        #         ]
+        # else:
+        #     possible_model_basenames = [model_basename]
+        #
+        # quantize_config.model_name_or_path = model_name_or_path
 
         extensions = []
         if use_safetensors:
@@ -858,17 +890,16 @@ class GPTQForCausalLM(nn.Module, PushToHubMixin):
         else:
             extensions += [".bin", ".pt"]
 
-        model_name_or_path = str(model_name_or_path)
+        # model_name_or_path = str(model_name_or_path)
 
-        # Retrieve (and if necessary download) the quantized checkpoint(s).
-        is_sharded, resolved_archive_file, true_model_basename = get_checkpoints(model_name_or_path=model_name_or_path,
-                                                                                 extensions=extensions,
-                                                                                 possible_model_basenames=possible_model_basenames,
-                                                                                 **cached_file_kwargs)
+        # # Retrieve (and if necessary download) the quantized checkpoint(s).
+        # is_sharded, resolved_archive_file, true_model_basename = get_checkpoints(model_name_or_path=model_name_or_path,
+        #                                                                          extensions=extensions,
+        #                                                                          possible_model_basenames=possible_model_basenames,
+        #                                                                          **cached_file_kwargs)
+        # quantize_config.model_file_base_name = true_model_basename
 
-        quantize_config.model_file_base_name = true_model_basename
-
-        model_save_name = resolved_archive_file  # In case a model is sharded, this would be `model.safetensors.index.json` which may later break.
+        # model_save_name = resolved_archive_file  # In case a model is sharded, this would be `model.safetensors.index.json` which may later break.
 
         if (not disable_exllama or not disable_exllamav2) and trainable:
             logger.warning(
@@ -985,95 +1016,95 @@ class GPTQForCausalLM(nn.Module, PushToHubMixin):
                 )
 
             # TODO: move this logic in an awq_utils.py file.
-            if quantize_config.checkpoint_format == CHECKPOINT_FORMAT.AWQ_GEMM:
-                if is_sharded:
-                    raise ValueError(
-                        "The loading of sharded checkpoints with AWQ checkpoints is currently not supported. Please raise an issue in AutoGPTQ repository.")
-
-                if use_marlin:
-                    raise ValueError(
-                        "Tried to load an AWQ model with use_marlin=True. This is currently not supported. Please open an issue in AutoGPTQ repository."
-                    )
-
-                model_cache_name, is_cached = quantize_config.get_cache_file_path()
-
-                if is_cached:
-                    model_save_name = model_cache_name
-                    logger.info(f"Loading an AWQ model, detected a cached repacked weight at {model_save_name}.")
-                else:
-                    logger.info(
-                        "Loading an AWQ model. This requires repacking the weights, and no cached repacked checkpoint was found. Grab a coffee!"
-                    )
-
-                    if "safetensors" not in model_save_name:
-                        raise NotImplementedError(
-                            f"Conversion from AWQ checkpoints is implemented only for safetensors checkpoints, found {model_save_name}"
-                        )
-                    if quantize_config.bits != 4:
-                        raise NotImplementedError(
-                            f"Conversion from AWQ checkpoints is supported only for 4 bits models. Found {quantize_config.bits} bits."
-                        )
-                    gptq_layers = set()
-                    non_gptq_params = set()
-                    with safe_open(model_save_name, framework="pt") as f:
-                        for state_dict_key in f.keys():
-                            if (
-                                    "qweight" not in state_dict_key
-                                    and "qzeros" not in state_dict_key
-                                    and "scales" not in state_dict_key
-                            ):
-                                non_gptq_params.add(state_dict_key)
-                                continue
-
-                            # e.g. prefix "model.layers.3.self_attn.k_proj"
-                            prefix, _ = state_dict_key.rsplit(".", 1)
-                            gptq_layers.add(prefix)
-
-                        new_state_dict = {}
-
-                        for state_dict_key in non_gptq_params:
-                            new_state_dict[state_dict_key] = f.get_tensor(state_dict_key)
-
-                        gptq_layers = sorted(gptq_layers)
-                        max_layer_name_length = len(max(gptq_layers, key=len))
-                        pbar = tqdm(gptq_layers)
-                        i = 0
-                        for gptq_layer_name in pbar:
-                            i += 1
-                            desc = f"Unpacking {gptq_layer_name} + '...'"
-                            desc = desc + " " * (max_layer_name_length - len(desc))
-
-                            awq_qweight = f.get_tensor(gptq_layer_name + ".qweight")
-                            awq_qzeros = f.get_tensor(gptq_layer_name + ".qzeros")
-                            awq_scales = f.get_tensor(gptq_layer_name + ".scales")
-
-                            # TODO: add FAST unpacking.
-                            unpacked_qweight, unpacked_qzeros = unpack_awq(
-                                awq_qweight,
-                                awq_qzeros,
-                                awq_scales,
-                                bits=quantize_config.bits,
-                                group_size=quantize_config.group_size,
-                            )
-
-                            # TODO: add FAST repacking, this is too slow.
-                            desc = f"Repacking {gptq_layer_name}..."
-                            desc = desc + " " * (max_layer_name_length + 12 - len(desc))
-                            pbar.set_description(desc)
-                            gptq_qweight, gptq_qzeros = pack_from_tensors(
-                                unpacked_qweight,
-                                unpacked_qzeros,
-                                awq_scales,
-                                bits=quantize_config.bits,
-                                group_size=quantize_config.group_size,
-                            )
-
-                            new_state_dict[gptq_layer_name + ".qweight"] = gptq_qweight
-                            new_state_dict[gptq_layer_name + ".qzeros"] = gptq_qzeros
-                            new_state_dict[gptq_layer_name + ".scales"] = awq_scales
-
-                        safe_save(new_state_dict, model_cache_name)
-                        model_save_name = model_cache_name
+            # if quantize_config.checkpoint_format == CHECKPOINT_FORMAT.AWQ_GEMM:
+            #     if is_sharded:
+            #         raise ValueError(
+            #             "The loading of sharded checkpoints with AWQ checkpoints is currently not supported. Please raise an issue in AutoGPTQ repository.")
+            #
+            #     if use_marlin:
+            #         raise ValueError(
+            #             "Tried to load an AWQ model with use_marlin=True. This is currently not supported. Please open an issue in AutoGPTQ repository."
+            #         )
+            #
+            #     model_cache_name, is_cached = quantize_config.get_cache_file_path()
+            #
+            #     if is_cached:
+            #         model_save_name = model_cache_name
+            #         logger.info(f"Loading an AWQ model, detected a cached repacked weight at {model_save_name}.")
+            #     else:
+            #         logger.info(
+            #             "Loading an AWQ model. This requires repacking the weights, and no cached repacked checkpoint was found. Grab a coffee!"
+            #         )
+            #
+            #         if "safetensors" not in model_save_name:
+            #             raise NotImplementedError(
+            #                 f"Conversion from AWQ checkpoints is implemented only for safetensors checkpoints, found {model_save_name}"
+            #             )
+            #         if quantize_config.bits != 4:
+            #             raise NotImplementedError(
+            #                 f"Conversion from AWQ checkpoints is supported only for 4 bits models. Found {quantize_config.bits} bits."
+            #             )
+            #         gptq_layers = set()
+            #         non_gptq_params = set()
+            #         with safe_open(model_save_name, framework="pt") as f:
+            #             for state_dict_key in f.keys():
+            #                 if (
+            #                         "qweight" not in state_dict_key
+            #                         and "qzeros" not in state_dict_key
+            #                         and "scales" not in state_dict_key
+            #                 ):
+            #                     non_gptq_params.add(state_dict_key)
+            #                     continue
+            #
+            #                 # e.g. prefix "model.layers.3.self_attn.k_proj"
+            #                 prefix, _ = state_dict_key.rsplit(".", 1)
+            #                 gptq_layers.add(prefix)
+            #
+            #             new_state_dict = {}
+            #
+            #             for state_dict_key in non_gptq_params:
+            #                 new_state_dict[state_dict_key] = f.get_tensor(state_dict_key)
+            #
+            #             gptq_layers = sorted(gptq_layers)
+            #             max_layer_name_length = len(max(gptq_layers, key=len))
+            #             pbar = tqdm(gptq_layers)
+            #             i = 0
+            #             for gptq_layer_name in pbar:
+            #                 i += 1
+            #                 desc = f"Unpacking {gptq_layer_name} + '...'"
+            #                 desc = desc + " " * (max_layer_name_length - len(desc))
+            #
+            #                 awq_qweight = f.get_tensor(gptq_layer_name + ".qweight")
+            #                 awq_qzeros = f.get_tensor(gptq_layer_name + ".qzeros")
+            #                 awq_scales = f.get_tensor(gptq_layer_name + ".scales")
+            #
+            #                 # TODO: add FAST unpacking.
+            #                 unpacked_qweight, unpacked_qzeros = unpack_awq(
+            #                     awq_qweight,
+            #                     awq_qzeros,
+            #                     awq_scales,
+            #                     bits=quantize_config.bits,
+            #                     group_size=quantize_config.group_size,
+            #                 )
+            #
+            #                 # TODO: add FAST repacking, this is too slow.
+            #                 desc = f"Repacking {gptq_layer_name}..."
+            #                 desc = desc + " " * (max_layer_name_length + 12 - len(desc))
+            #                 pbar.set_description(desc)
+            #                 gptq_qweight, gptq_qzeros = pack_from_tensors(
+            #                     unpacked_qweight,
+            #                     unpacked_qzeros,
+            #                     awq_scales,
+            #                     bits=quantize_config.bits,
+            #                     group_size=quantize_config.group_size,
+            #                 )
+            #
+            #                 new_state_dict[gptq_layer_name + ".qweight"] = gptq_qweight
+            #                 new_state_dict[gptq_layer_name + ".qzeros"] = gptq_qzeros
+            #                 new_state_dict[gptq_layer_name + ".scales"] = awq_scales
+            #
+            #             safe_save(new_state_dict, model_cache_name)
+            #             model_save_name = model_cache_name
 
             if use_marlin:
                 if is_sharded:
@@ -1092,7 +1123,7 @@ class GPTQForCausalLM(nn.Module, PushToHubMixin):
                 unsupported_reason = _validate_marlin_compatibility(quantize_config)
                 if unsupported_reason is not None:
                     raise ValueError(
-                        f"The model {model_name_or_path} can not be converted to use the Marlin kernel for the following reason: {unsupported_reason}, which is not supported by Marlin kernel."
+                        f"The model  can not be converted to use the Marlin kernel for the following reason: {unsupported_reason}, which is not supported by Marlin kernel."
                     )
 
                 # Load the quant linear type we need.
