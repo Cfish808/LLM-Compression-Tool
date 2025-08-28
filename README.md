@@ -23,7 +23,7 @@ LLM Compression Tool is a project designed to optimize machine learning inferenc
     - [Quantize \&\& Evaluation (Code)](#quantize--evaluation-code)
   - [OOD Benchmark Results](#ood-benchmark-results)
     - [Perplexity (PPL) of the LLaMA-2-7B Model](#perplexity-ppl-of-the-llama-2-7b-model)
-    - [Precision of the LLaMA-2-7B Model](#precision-of-the-llama-2-7b-model)
+    - [Evaluation Of Quantized Model Capabilities](#evaluation-of-quantized-model-capabilities)
   - [Cite](#cite)
 
 
@@ -333,9 +333,9 @@ Below are some test results obtained from the Out-of-Distribution (OOD) benchmar
 ### Perplexity (PPL) of the LLaMA-2-7B Model
 
 
-### Precision of the LLaMA-2-7B Model
+### Evaluation Of Quantized Model Capabilities
 
 
 
 ## Cite
-If you found this work useful, please consider citing:
+If you found this work useful, please consider citing
