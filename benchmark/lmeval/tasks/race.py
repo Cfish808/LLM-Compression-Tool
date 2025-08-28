@@ -10,7 +10,7 @@ can be served as the training and test sets for machine comprehension.
 Homepage: https://www.cs.cmu.edu/~glai1/data/race/
 """
 import collections
-import datasets
+import my_datasets
 import numpy as np
 from benchmark.lmeval.base import rf, Task
 from benchmark.lmeval.metrics import mean
@@ -59,7 +59,7 @@ class RACE(Task):
         # is shown that one document is made per passage.
 
         r = collections.defaultdict(list)
-        for item in datasets.load_dataset(
+        for item in my_datasets.load_dataset(
             path=self.DATASET_PATH, name=self.DATASET_NAME
         )[set]:
             r[item["article"]].append(item)

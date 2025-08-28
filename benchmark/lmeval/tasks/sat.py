@@ -8,7 +8,8 @@ multiple-choice analogy questions; 5 choices per question.
 Homepage: https://aclweb.org/aclwiki/SAT_Analogy_Questions_(State_of_the_art)
 """
 import inspect
-import lmeval.lmdatasets.sat_analogies.sat_analogies
+
+from benchmark.lmeval import lmeval
 from benchmark.lmeval.base import MultipleChoiceTask
 
 

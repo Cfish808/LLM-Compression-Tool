@@ -9,7 +9,8 @@ addition, or deletion of characters, and asking it to recover the original word.
 Homepage: https://github.com/openai/gpt-3/tree/master/data
 """
 import inspect
-import lmeval.lmdatasets.unscramble.unscramble
+
+from benchmark.lmeval import lmeval
 from benchmark.lmeval.base import Task, rf
 from benchmark.lmeval.metrics import mean
 

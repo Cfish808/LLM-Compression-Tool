@@ -98,7 +98,7 @@ def compute_metric(task, predictions, references):
         results = sum / len(references) *100
     
     elif task == "NameEntityRecognition":
-        from datasets import load_metric
+        from my_datasets import load_metric
         results = 100.00 * evaluate_ner(predictions, references)["avg"]["f1_score"]
     elif task == "QuestionAnswering":
         em, f1 = 0, 0

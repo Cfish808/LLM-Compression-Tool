@@ -1,6 +1,6 @@
 import re
 import abc
-import datasets
+import my_datasets
 import numpy as np
 from benchmark.lmeval import utils
 from benchmark.lmeval.metrics import mean, weighted_perplexity, bits_per_byte
@@ -18,7 +18,7 @@ class Task(abc.ABC):
 
     def download(self, data_dir=None, cache_dir=None, download_mode=None):
         # if show: Couldn't reach 'dataset_name' on the Hub (ConnectionError)  ==> run: python cache.py
-        self.dataset = datasets.load_dataset(
+        self.dataset = my_datasets.load_dataset(
             path=self.DATASET_PATH,
             name=self.DATASET_NAME,
             data_dir=data_dir,

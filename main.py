@@ -14,19 +14,21 @@ from torch.distributed import destroy_process_group, init_process_group
 import pdb
 import logging
 
-from transformers import AutoTokenizer, LlamaForCausalLM, LlamaTokenizer
+from transformers import AutoTokenizer, LlamaForCausalLM
 
-from mi_optimize import QLinear, Benchmark
-from mi_optimize.quantization import QuantizedModule
-from mi_optimize.quantization.models import llama_sequential
-from mi_optimize.quantization.quantizer import LinearGPTQQuantizer
+from export import QLinear
+from my_datasets import get_calibrate_loader
+from quantization.gptq.GPTQQuantizer import LinearGPTQQuantizer
+from quantization.llama_seq import llama_sequential
+from quantization.__init__ import QuantizedModule
+from utils.benchmark import Benchmark
+from utils.load_dataset import BaseDataset
+from utils.load_model import BaseModel
 
 
 def deploy_all_modality(blockwise_opts, quant_format):
     for blockwise_opt in blockwise_opts:
         blockwise_opt.deploy(quant_format)
-
-
 def load_model(model_name_or_path):
     def skip(*args, **kwargs):
         pass
@@ -36,6 +38,7 @@ def load_model(model_name_or_path):
     torch.nn.init.normal_ = skip
     model = LlamaForCausalLM.from_pretrained(model_name_or_path, torch_dtype='auto')
     return model
+
 
 
 def transform_layers(module):
@@ -48,23 +51,23 @@ def transform_layers(module):
 
 
 def main(config):
+    basemodel = BaseModel(config)
+    tokenizer = basemodel.build_tokenizer()
+    model=basemodel.build_model()
+    model = load_model(config.model.path)
+    model.eval()
     new_config = {'model_path': '/ssd/yejinyu/llama2_7b/Llama-2-7b-ms/', 'algo': 'gptq', 'wbit': 3, 'abit': 16,
                   'w_groupsize': 128, 'w_qtype': 'per_group', 'benchmark': 'ceval', 'num_calibrate': 1, 'num_shot': 0,
                   'calibrate_name': 'c4', 'seqlen': 2048, 'device': 'cuda', 'offload': 'cpu',
                   'skip_layers': ['l', 'm', '_', 'h', 'e', 'a', 'd'], 'block_sequential': False,
                   'layer_sequential': False, 'save': '/ssd/yejinyu/llama2_7b/output/llama2_7b_miom.pt'}
-
-    model = load_model(config.model.path)
-    model.eval()
-    tokenizer = LlamaTokenizer.from_pretrained(config.model.path, legacy=False)
-
     # new_model=basemodel.replace_module(model, exclude_layers=config.skip_layers, include_layers=['.*'])
     # calibrate_config = {'name': 'c4', 'nsamples': 1, 'seqlen': 2048}
     # calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=calibrate_config)
-    calibrate = torch.load("calibrate.pt")
+    calibrate=torch.load("calibrate.pt")
     config["algo"] = "gptq"
     del config["model"]
-    new_model = llama_sequential(model=model, data=calibrate, **config)
+    new_model=llama_sequential(model=model,data=calibrate,**new_config)
     new_model = new_model.to("cuda")
     logger.info(f'model: {model}')
     logger.info(f'tokenizer: {tokenizer}')
@@ -81,6 +84,8 @@ def main(config):
     save_path = "/home/yejinyu/llama2_7b/output/llama27b_model_quant_tool.pt"
     # model = basemodel.replace_module(new_model, QuantizedModule, transform_layers, display=True)
     torch.save(new_model, save_path)
+
+
 
     # eval_list = get_eval_list(model, config)
     # eval_model(model, None, eval_list, eval_pos='pretrain')
@@ -146,12 +151,14 @@ if __name__ == '__main__':
     os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
     os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
+
     with open(args.config, 'r') as file:
         config = yaml.safe_load(file)
     config = EasyDict(config)
 
     logger.info(f'args: {args}')
     logger.info(f'config:\n{json.dumps(config, ensure_ascii=False, indent=4)}')
+
 
     save_fake_path = os.path.join(config.save.save_path, 'output_models')
     mkdirs(save_fake_path)
@@ -161,10 +168,12 @@ if __name__ == '__main__':
 
     main(config)
 
+
     llmc_end_time = time.time()
     llmc_duration_time = llmc_end_time - llmc_start_time
     logger.info(f'llmc_duration_time: {llmc_duration_time} s')
     logger.info('--- llmc finished ---')
+
 
 # export HF_HOME=/home/yejinyu/huggingface_3_copy
 #
@@ -177,4 +186,3 @@ if __name__ == '__main__':
 # export HF_ENDPOINT=https://hf-mirror.com
 # export HF_HOME=/ssd/yejinyu/huggingface_3_copy
 # export HF_DATASETS_CACHE=/ssd/yejinyu/huggingface_3_copy
-# CUDA_VISIBLE_DEVICES=0

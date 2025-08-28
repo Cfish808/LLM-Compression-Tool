@@ -6,7 +6,7 @@ The General Language Understanding Evaluation (GLUE) benchmark is a collection o
 resources for training, evaluating, and analyzing natural language understanding
 systems. GLUE consists of:
 - A benchmark of nine sentence- or sentence-pair language understanding tasks built
-on established existing datasets and selected to cover a diverse range of dataset
+on established existing my_datasets and selected to cover a diverse range of dataset
 sizes, text genres, and degrees of difficulty, and
 - A diagnostic dataset designed to evaluate and analyze model performance with
 respect to a wide range of linguistic phenomena found in natural language.
@@ -19,7 +19,7 @@ from benchmark.lmeval.metrics import mean, yesno # , matthews_corrcoef, f1_score
 from benchmark.lmeval.utils import general_detokenize
 
 
-# TODO(jon-tow): Add citations for the individual datasets/tasks that make up GLUE.
+# TODO(jon-tow): Add citations for the individual my_datasets/tasks that make up GLUE.
 _CITATION = """
 @inproceedings{wang-etal-2018-glue,
     title = "{GLUE}: A Multi-Task Benchmark and Analysis Platform for Natural Language Understanding",
@@ -37,7 +37,7 @@ _CITATION = """
     url = "https://aclanthology.org/W18-5446",
     doi = "10.18653/v1/W18-5446",
     pages = "353--355",
-    abstract = "Human ability to understand language is \textit{general, flexible, and robust}. In contrast, most NLU models above the word level are designed for a specific task and struggle with out-of-domain data. If we aspire to develop models with understanding beyond the detection of superficial correspondences between inputs and outputs, then it is critical to develop a unified model that can execute a range of linguistic tasks across different domains. To facilitate research in this direction, we present the General Language Understanding Evaluation (GLUE, gluebenchmark.com): a benchmark of nine diverse NLU tasks, an auxiliary dataset for probing models for understanding of specific linguistic phenomena, and an online platform for evaluating and comparing models. For some benchmark tasks, training data is plentiful, but for others it is limited or does not match the genre of the test set. GLUE thus favors models that can represent linguistic knowledge in a way that facilitates sample-efficient learning and effective knowledge-transfer across tasks. While none of the datasets in GLUE were created from scratch for the benchmark, four of them feature privately-held test data, which is used to ensure that the benchmark is used fairly. We evaluate baselines that use ELMo (Peters et al., 2018), a powerful transfer learning technique, as well as state-of-the-art sentence representation models. The best models still achieve fairly low absolute scores. Analysis with our diagnostic dataset yields similarly weak performance over all phenomena tested, with some exceptions.",
+    abstract = "Human ability to understand language is \textit{general, flexible, and robust}. In contrast, most NLU models above the word level are designed for a specific task and struggle with out-of-domain data. If we aspire to develop models with understanding beyond the detection of superficial correspondences between inputs and outputs, then it is critical to develop a unified model that can execute a range of linguistic tasks across different domains. To facilitate research in this direction, we present the General Language Understanding Evaluation (GLUE, gluebenchmark.com): a benchmark of nine diverse NLU tasks, an auxiliary dataset for probing models for understanding of specific linguistic phenomena, and an online platform for evaluating and comparing models. For some benchmark tasks, training data is plentiful, but for others it is limited or does not match the genre of the test set. GLUE thus favors models that can represent linguistic knowledge in a way that facilitates sample-efficient learning and effective knowledge-transfer across tasks. While none of the my_datasets in GLUE were created from scratch for the benchmark, four of them feature privately-held test data, which is used to ensure that the benchmark is used fairly. We evaluate baselines that use ELMo (Peters et al., 2018), a powerful transfer learning technique, as well as state-of-the-art sentence representation models. The best models still achieve fairly low absolute scores. Analysis with our diagnostic dataset yields similarly weak performance over all phenomena tested, with some exceptions.",
 }
 """
 
