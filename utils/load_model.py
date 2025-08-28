@@ -10,6 +10,7 @@ import inspect
 import json
 import logging
 import os
+import re
 from typing import Dict, List, Optional, Union
 from collections import defaultdict
 
@@ -18,19 +19,11 @@ import torch
 import transformers
 from torch import nn
 from tqdm import tqdm
-from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, logger  # Add required imports
+from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 from transformers.modeling_utils import no_init_weights
 from transformers.utils import ContextManagers, cached_file
 
-from quantization.auto_gptq import BaseQuantizeConfig
-from quantization.auto_gptq.modeling._utils import find_layers, make_quant, get_checkpoints, \
-    make_sure_no_tensor_in_meta_device, simple_dispatch_model
-from quantization.auto_gptq.utils.accelerate_utils import load_checkpoint_in_model
-from quantization.auto_gptq.utils.import_utils import dynamically_import_QuantLinear
-from quantization.auto_gptq.utils.marlin_utils import _validate_marlin_device_support, _validate_marlin_compatibility, \
-    prepare_model_for_marlin_load
-
-
+from quantization.__init__ import QuantizedModule
 
 
 def get_checkpoints(model_name_or_path: str, extensions: List[str], possible_model_basenames: List[str], **cached_file_kwargs):
@@ -131,88 +124,74 @@ class BaseModel():
             config=self.model_config,
             device_map=self.device_map,
             trust_remote_code=True,
-            torch_dtype=self.torch_dtype,
             low_cpu_mem_usage=True,
         )
-    def from_quantized(
-            cls,
-            model_name_or_path: Optional[str],
-            device_map: Optional[Union[str, Dict[str, Union[int, str]]]] = None,
-            max_memory: Optional[dict] = None,
-            device: Optional[Union[str, int]] = None,
-            low_cpu_mem_usage: bool = False,
-            use_triton: bool = False,
-            use_qigen: bool = False,
-            use_marlin: bool = False,
-            torch_dtype: Optional[torch.dtype] = None,
-            inject_fused_attention: bool = False,
-            inject_fused_mlp: bool = False,
-            use_cuda_fp16: bool = True,
-            quantize_config: Optional[BaseQuantizeConfig] = None,
-            model_basename: Optional[str] = None,
-            use_safetensors: bool = True,
-            trust_remote_code: bool = False,
-            warmup_triton: bool = False,
-            trainable: bool = False,
-            disable_exllama: Optional[bool] = None,
-            disable_exllamav2: bool = False,
-            use_tritonv2: bool = False,
-            checkpoint_format: Optional[str] = None,
-            **kwargs,
-    ):
+        self.model.eval()
+        return self.model
 
 
-        # Parameters related to loading from Hugging Face Hub
-        cache_dir = kwargs.pop("cache_dir", None)
-        force_download = kwargs.pop("force_download", False)
-        resume_download = kwargs.pop("resume_download", False)
-        proxies = kwargs.pop("proxies", None)
-        local_files_only = kwargs.pop("local_files_only", False)
-        use_auth_token = kwargs.pop("use_auth_token", None)
-        revision = kwargs.pop("revision", None)
-        subfolder = kwargs.pop("subfolder", "")
-        commit_hash = kwargs.pop("_commit_hash", None)
-
-        cached_file_kwargs = {
-            "cache_dir": cache_dir,
-            "force_download": force_download,
-            "proxies": proxies,
-            "resume_download": resume_download,
-            "local_files_only": local_files_only,
-            "use_auth_token": use_auth_token,
-            "revision": revision,
-            "subfolder": subfolder,
-            "_raise_exceptions_for_missing_entries": False,
-            "_commit_hash": commit_hash,
-        }
-
-        # == step1: prepare configs and file names == #
-        config = AutoConfig.from_pretrained(
-            model_name_or_path,
-            trust_remote_code=trust_remote_code,
-            **cached_file_kwargs,
-        )
-        quantize_config.model_name_or_path = model_name_or_path
-        extensions = []
-        if use_safetensors:
-            extensions.append(".safetensors")
+    def build_tokenizer(self):
+        if self.model_type not in ['Vit', 'WanT2V', 'WanI2V']:
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_path, use_fast=self.tokenizer_mode, trust_remote_code=True
+            )
+            if 'Intern' in self.model_type:
+                self.tokenizer.padding_side = 'left'
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
         else:
-            extensions += [".bin", ".pt"]
+            self.tokenizer = None
+        return  self.tokenizer
 
+    def replace_module(self,model, module_type=torch.nn.Linear, new_module_type=QuantizedModule, exclude_layers=[],
+                       include_layers=['.*'], display=False):
+        if display:
+            def count_children(module, name=''):
+                count = 0
+                for child_name, mod in list(module.named_children()):
+                    if any(re.fullmatch(pat, name + child_name) for pat in include_layers):
+                        if any(re.fullmatch(pat, name + child_name) for pat in exclude_layers):
+                            continue
+                        if isinstance(mod, module_type):
+                            count += 1
+                        else:
+                            count += count_children(mod, name + child_name + '.')
+                return count
 
-        if model_basename is None:
-            if quantize_config.model_file_base_name:
-                possible_model_basenames = [quantize_config.model_file_base_name]
-            else:
-                possible_model_basenames = [
-                    f"gptq_model-{quantize_config.bits}bit-{quantize_config.group_size}g",
-                    "model",
-                ]
-        else:
-            possible_model_basenames = [model_basename]
-        is_sharded, resolved_archive_file, true_model_basename = get_checkpoints(model_name_or_path=model_name_or_path,
-                                                                                 extensions=extensions,
-                                                                                 possible_model_basenames=possible_model_basenames,
-                                                                                 **cached_file_kwargs)
-        quantize_config.model_file_base_name = true_model_basename
+            count = count_children(model, name='')
+            bar = tqdm(total=count)
 
+        # transform in-place
+        def transform_children(module, name=''):
+            for child_name, mod in list(module.named_children()):
+                if any(re.fullmatch(pat, name + child_name) for pat in include_layers):
+                    if any(re.fullmatch(pat, name + child_name) for pat in exclude_layers):
+                        continue
+                if isinstance(mod, module_type):
+                    if display:
+                        bar.update(1)
+                    try:
+                        setattr(module, child_name, new_module_type(mod, name=child_name))
+                    except:
+                        setattr(module, child_name, new_module_type(mod))
+                else:
+                    transform_children(mod, name + child_name + '.')
+
+        transform_children(model, name='')
+        return model
+
+    def find_layers(self,module, layers, name=''):
+        if isinstance(layers, list):  # 如果 layers 是 list，就转成 tuple，方便 isinstance 判断
+            layers = tuple(layers)
+
+        if isinstance(module, layers):  # 如果当前 module 是目标类型层
+            return {name: module}  # 返回 {层的名字: 层对象}
+
+        res = {}  # 用来收集结果
+        for name1, child in module.named_children():  # 遍历当前 module 的子模块
+            res.update(self.find_layers(  # 递归向下搜索
+                child,
+                layers=layers,
+                name=name + '.' + name1 if name != '' else name1
+            ))
+        return res

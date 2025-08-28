@@ -11,7 +11,7 @@ import numpy as np
 from datasets import load_dataset, load_from_disk
 
 class BaseDataset():
-    def __init__(self, config,seed= 42):
+    def __init__(self,tokenizer,batch_process, config,seed= 42):
         """
         config 示例：
         data:
@@ -24,8 +24,11 @@ class BaseDataset():
             preproc: c4_gptq
             seed: 42
         """
+        self.tokenizer = tokenizer
+        self.batch_process = batch_process
         self.config = config
         self.dataset_name = self.config.get("name")
+        self.seq_len= self.config.get("seq_len")
         self.download= self.config.get("download")
         self.n_samples = self.config.get("n_samples", 128)
         self.batch_size = self.config.get("bs", 1)
@@ -84,8 +87,17 @@ class BaseDataset():
 
         # 采样 n_samples
         sampled_texts = random.sample(texts, min(self.n_samples, len(texts)))
+        # 对 sampled_texts 做 tokenize 并截断到 seq_len
+        tokenized = self.tokenizer(
+            sampled_texts,
+            max_length=self.seq_len,  # 限制到 seq_len
+            truncation=True,  # 太长截断
+            padding="max_length",  # 太短补 pad
+            return_tensors="pt"  # 返回 PyTorch tensor
+        )
 
         # 返回 batch 形式
         for i in range(0, len(sampled_texts), self.batch_size):
-            yield sampled_texts[i:i + self.batch_size]
+            yield {k: v[i:i + self.batch_size] for k, v in tokenized.items()}
+
 
