@@ -6,7 +6,7 @@ LLM Compression Tool is a project designed to optimize machine learning inferenc
 
 - [LLM Compression Tool](#llm-compression-tool)
   - [Table of Contents](#table-of-contents)
-  - [News or Update](#news-or-update)
+  - [TODO](#todo)
   - [Introduction](#introduction)
   - [Features](#features)
   - [Installation](#installation)
@@ -27,7 +27,9 @@ LLM Compression Tool is a project designed to optimize machine learning inferenc
   - [Cite](#cite)
 
 
-## News or Update
+## TODO
+- The code for the GPTQ implementation needs optimization. The current 3-bit perplexity (PPL) is around 8, which does not match the performance level of AutoGPTQ.
+- The supported base models should be expanded. The current implementation only supports LLaMA 2. Expanding to include other models would significantly improve the paper's contribution and relevance.
 
 ## Introduction
 Although LLMs excel in various NLP tasks, their computational and memory demands may limit their deployment in real-time applications and on resource-constrained devices. This project addresses this challenge by employing quantization techniques to compress these models, ensuring they maintain performance while remaining adaptable to a wide range of scenarios. 
@@ -105,7 +107,7 @@ Quantization (JSQ)
 ## Usage
 ### Quick Start
 ```
-python mian.py --config.yml
+python mian.py --config.yml config/llama_gptq.yml
 ```
 ### Quantization 
 Below is an example of how to set up the quantization process for a model. For detailed information on all available quantization configuration options, please refer to the [quantization configuration guide](configs/README.md).
