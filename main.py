@@ -57,15 +57,15 @@ def main(config):
     tokenizer = basemodel.build_tokenizer()
     model=basemodel.build_model()
 
-    new_config = {'model_path': '/ssd/yejinyu/llama2_7b/Llama-2-7b-ms/', 'algo': 'gptq', 'wbit': 4, 'abit': 16,
+    new_config = {'model_path': '/ssd/yejinyu/llama2_7b/Llama-2-7b-ms/', 'algo': 'gptq', 'wbit': 3, 'abit': 16,
                   'w_groupsize': 128, 'w_qtype': 'per_group', 'benchmark': 'ceval', 'num_calibrate': 1, 'num_shot': 0,
                   'calibrate_name': 'c4', 'seqlen': 2048, 'device': 'cuda', 'offload': 'cpu',
                   'skip_layers': ['l', 'm', '_', 'h', 'e', 'a', 'd'], 'block_sequential': False,
                   'layer_sequential': False, 'save': '/ssd/yejinyu/llama2_7b/output/llama2_7b_miom.pt'}
     # new_model=basemodel.replace_module(model, exclude_layers=config.skip_layers, include_layers=['.*'])
-    # calibrate_config = {'name': 'c4', 'nsamples': 1, 'seqlen': 2048}
-    # calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=calibrate_config)
-    calibrate=torch.load("calibrate.pt")
+    calibrate_config = {'name': 'c4', 'nsamples': 1, 'seqlen': 2048}
+    calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=calibrate_config)
+    # calibrate=torch.load("calibrate.pt")
     config["algo"] = "gptq"
     del config["model"]
     new_model=llama_sequential(model=model,data=calibrate,**new_config)
@@ -73,23 +73,23 @@ def main(config):
     logger.info(f'model: {model}')
     logger.info(f'tokenizer: {tokenizer}')
     benchmark = Benchmark()
-    # results_ceval = benchmark.eval_ppl(new_model, tokenizer, nsamples='all', test_datasets=['wikitext2'])
+    results_ceval = benchmark.eval_ppl(new_model, tokenizer, nsamples='all', test_datasets=['wikitext2'])
     # results_ceval = benchmark.eval_ceval(new_model, tokenizer,model_type="llama",subject="hm" )
     logging.info("\n转换前:")
-    # logging.info(results_ceval)
+    logging.info(results_ceval)
     # if args.save:
     save_path = "/home/yejinyu/llama2_7b/output/llama27b_miom"
     # new_model.generation_config.do_sample = True
     # new_model.save_pretrained(save_path)
     # tokenizer.save_pretrained(save_path)
 
-    save_path2 = "/ssd/yejinyu/llama2_7b/output/llama27b_model_quant_tool_4.pt"
-    model = replace_module(new_model, LinearQuantHub, transform_layers, display=True)
-    torch.save(model, save_path2)
-
-    results_ceval = benchmark.eval_ppl(model, tokenizer, nsamples='all', test_datasets=['wikitext2'])
-    logging.info("\n转换后的模型:")
-    logging.info(results_ceval)
+    # save_path2 = "/ssd/yejinyu/llama2_7b/output/llama27b_model_quant_tool_4.pt"
+    # model = replace_module(new_model, LinearQuantHub, transform_layers, display=True)
+    # torch.save(model, save_path2)
+    #
+    # results_ceval = benchmark.eval_ppl(model, tokenizer, nsamples='all', test_datasets=['wikitext2'])
+    # logging.info("\n转换后的模型:")
+    # logging.info(results_ceval)
 
 
 
