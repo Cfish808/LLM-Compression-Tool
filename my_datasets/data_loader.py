@@ -28,16 +28,12 @@ def get_wikitext2(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, *
     
     if split=='test':
         logging.info("get_wikitext2_test")
+
         try:
-            testenc=torch.load("/ssd/yejinyu/model-quantification-tool/wikitext2_calibrate.pt")
-        except:
-            try:
-                0/0
-                testdata = load_dataset("/home/yejinyu/MI-optimize-main/mi_optimize/datasets/wikitext", 'wikitext-2-raw-v1', split='test')
-            except :
-                testdata = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
-            testenc = tokenizer("\n\n".join(testdata['text']), return_tensors='pt')
-            torch.save(testenc,"/ssd/yejinyu/model-quantification-tool/wikitext2_calibrate.pt")
+            testdata = load_dataset("/home/yejinyu/MI-optimize-main/mi_optimize/datasets/wikitext", 'wikitext-2-raw-v1', split='test')
+        except :
+            testdata = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+        testenc = tokenizer("\n\n".join(testdata['text']), return_tensors='pt')
         if nsamples=='all':
             nsamples = len(testenc['input_ids'][0]) // seqlen + 1
         testloader = []
@@ -69,11 +65,12 @@ def get_c4(tokenizer, split='validation', nsamples=128, seqlen=2048, seed=42, **
         logging.info("get_c4_validation")
         # valdata = load_dataset("allenai/c4", name='default', data_files={'validation': 'en/c4-validation.00000-of-00008.json.gz'}, split='validation')
         # valdata = load_dataset("allenai/c4",name="en",  data_files={'validation': 'en/c4-validation.00000-of-00008.json.gz'},split='validation')
-        try:
-            valdata =   load_dataset('allenai/c4',data_files={'train': 'en/c4-train.00000-of-01024.json.gz'} ,split='train')
-        except:
-            calibrate = torch.load("calibrate.pt")
-            return calibrate
+        # try:
+        valdata =   load_dataset('allenai/c4',data_files={'train': 'en/c4-train.00000-of-01024.json.gz'} ,split='train')
+        # except BaseException as e:
+        #     print(e)
+        #     calibrate = torch.load("calibrate.pt")
+        #     return calibrate
         testenc = tokenizer(" ".join(valdata[:1100]['text']), return_tensors='pt')  
         if nsamples=='all':  
             nsamples = len(testenc['input_ids'][0]) // seqlen + 1
