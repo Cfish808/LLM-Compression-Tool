@@ -61,7 +61,7 @@ class Benchmark:
         logging.info(f'c4 PPL {ppl}')
         return ppl
     
-    def eval_ppl(self, model, tokenizer, nsamples='all', test_datasets=['wikitext2', 'ptb']):
+    def eval_ppl(self, model, tokenizer, nsamples='all', test_datasets=['wikitext2']):
         logging.info("Evaluating Perplexity (PPL) on the wikitext2, c4, ptb dataset")
         results = {}
         if 'wikitext2' in test_datasets: 

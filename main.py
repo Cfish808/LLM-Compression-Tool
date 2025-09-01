@@ -19,8 +19,10 @@ from transformers import AutoTokenizer, LlamaForCausalLM
 from export import QLinear
 from my_datasets import get_calibrate_loader
 from quantization.gptq.GPTQQuantizer import LinearGPTQQuantizer
+from quantization.layers import LinearQuantHub
 from quantization.llama_seq import llama_sequential
 from quantization.__init__ import QuantizedModule
+from quantization.util import replace_module
 from utils.benchmark import Benchmark
 from utils.load_dataset import BaseDataset
 from utils.load_model import BaseModel
@@ -54,9 +56,8 @@ def main(config):
     basemodel = BaseModel(config)
     tokenizer = basemodel.build_tokenizer()
     model=basemodel.build_model()
-    model = load_model(config.model.path)
-    model.eval()
-    new_config = {'model_path': '/ssd/yejinyu/llama2_7b/Llama-2-7b-ms/', 'algo': 'gptq', 'wbit': 3, 'abit': 16,
+
+    new_config = {'model_path': '/ssd/yejinyu/llama2_7b/Llama-2-7b-ms/', 'algo': 'gptq', 'wbit': 4, 'abit': 16,
                   'w_groupsize': 128, 'w_qtype': 'per_group', 'benchmark': 'ceval', 'num_calibrate': 1, 'num_shot': 0,
                   'calibrate_name': 'c4', 'seqlen': 2048, 'device': 'cuda', 'offload': 'cpu',
                   'skip_layers': ['l', 'm', '_', 'h', 'e', 'a', 'd'], 'block_sequential': False,
@@ -72,18 +73,23 @@ def main(config):
     logger.info(f'model: {model}')
     logger.info(f'tokenizer: {tokenizer}')
     benchmark = Benchmark()
-    results_ceval = benchmark.eval_ppl(new_model, tokenizer, nsamples='all', test_datasets=['wikitext2'])
-    logging.info("\nCeval Benchmark Evaluation Results:")
-    logging.info(results_ceval)
+    # results_ceval = benchmark.eval_ppl(new_model, tokenizer, nsamples='all', test_datasets=['wikitext2'])
+    # results_ceval = benchmark.eval_ceval(new_model, tokenizer,model_type="llama",subject="hm" )
+    logging.info("\n转换前:")
+    # logging.info(results_ceval)
     # if args.save:
-    # save_path = "/home/yejinyu/llama2_7b/output/llama27b"
+    save_path = "/home/yejinyu/llama2_7b/output/llama27b_miom"
     # new_model.generation_config.do_sample = True
     # new_model.save_pretrained(save_path)
     # tokenizer.save_pretrained(save_path)
 
-    save_path = "/home/yejinyu/llama2_7b/output/llama27b_model_quant_tool.pt"
-    # model = basemodel.replace_module(new_model, QuantizedModule, transform_layers, display=True)
-    torch.save(new_model, save_path)
+    save_path2 = "/ssd/yejinyu/llama2_7b/output/llama27b_model_quant_tool_4.pt"
+    model = replace_module(new_model, LinearQuantHub, transform_layers, display=True)
+    torch.save(model, save_path2)
+
+    results_ceval = benchmark.eval_ppl(model, tokenizer, nsamples='all', test_datasets=['wikitext2'])
+    logging.info("\n转换后的模型:")
+    logging.info(results_ceval)
 
 
 
