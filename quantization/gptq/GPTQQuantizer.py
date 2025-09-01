@@ -16,6 +16,8 @@ class LinearGPTQQuantizer(BaseQuantizer):
         super().__init__(quant_hub_linear, wbit, abit, offload, device)
         self.blocksize = blocksize
         self.groupsize = w_groupsize
+        self.w_groupsize = self.groupsize
+
         self.nsamples = 0
         self.ready = False
         self.percdamp = percdamp

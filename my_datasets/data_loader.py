@@ -29,11 +29,15 @@ def get_wikitext2(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, *
     if split=='test':
         logging.info("get_wikitext2_test")
         try:
-            0/0
-            testdata = load_dataset("/home/yejinyu/MI-optimize-main/mi_optimize/datasets/wikitext", 'wikitext-2-raw-v1', split='test')
-        except :
-            testdata = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
-        testenc = tokenizer("\n\n".join(testdata['text']), return_tensors='pt')
+            testenc=torch.load("/ssd/yejinyu/model-quantification-tool/wikitext2_calibrate.pt")
+        except:
+            try:
+                0/0
+                testdata = load_dataset("/home/yejinyu/MI-optimize-main/mi_optimize/datasets/wikitext", 'wikitext-2-raw-v1', split='test')
+            except :
+                testdata = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+            testenc = tokenizer("\n\n".join(testdata['text']), return_tensors='pt')
+            torch.save(testenc,"/ssd/yejinyu/model-quantification-tool/wikitext2_calibrate.pt")
         if nsamples=='all':
             nsamples = len(testenc['input_ids'][0]) // seqlen + 1
         testloader = []

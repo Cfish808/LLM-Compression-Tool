@@ -130,7 +130,7 @@ def llama_sequential(model, algo, data, **kwargs):
                         layer.remove_hook()
                         layer.quantize()
                         layer.set_default_quantizer(0)
-                        # del layer.core.weight
+                        del layer.core.weight
                         layer.to(offload)
                         clear_mem()
                 del subset
