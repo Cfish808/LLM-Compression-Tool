@@ -235,14 +235,14 @@ class QLinear(QModule):
                 qlinear.bias = None
 
             # yejinyu: modify the shape of w_scale
-            c, l = qlinear.w_scale.data.shape
-            w_scale = w_scale.view(c, l)
+            # c, l = qlinear.w_scale.data.shape
+            # w_scale = w_scale.view(c, l)
 
             qlinear.w_scale.data.copy_(w_scale)
             # zxy: modify the shape of zero_point
             # 将zero_point 从[1,131072] 变成 [4096,32]
-            c, l = qlinear.w_zero_point.data.shape
-            zero_point = zero_point.view(c, l)
+            # c, l = qlinear.w_zero_point.data.shape
+            # zero_point = zero_point.view(c, l)
 
             qlinear.w_scale.data.copy_(w_scale)
 

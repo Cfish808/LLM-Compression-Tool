@@ -5,8 +5,8 @@ from tqdm import tqdm
 import pdb
 from quantization.gptq.GPTQQuantizer import LinearGPTQQuantizer
 from quantization.layers import LinearQuantHub
-from quantization.__init__ import QuantizedModule
-from quantization.util import replace_module, find_layers
+
+from utils.load_model import  find_layers
 from utils.memory import clear_mem
 
 
@@ -16,10 +16,7 @@ def llama_sequential(model, algo, data, **kwargs):
     offload = kwargs.get('offload', 'cpu')
     block_sequential = kwargs.get('block_sequential', False)
     layer_sequential = kwargs.get('layer_sequential', False)
-
     with torch.no_grad():
-
-        replace_module(model, exclude_layers=kwargs['skip_layers'], include_layers=['.*'])
         use_cache = model.config.use_cache
         model_device = model.device
         model.config.use_cache = False
@@ -119,6 +116,7 @@ def llama_sequential(model, algo, data, **kwargs):
                         smooth_factors = layer.quantizer[0].smooth_factor
                         smooth_weight = layer.core.weight.data.mul(smooth_factors.view(1, -1))
                         layer.core.weight.data = smooth_weight.to(layer.core.weight.data)
+
                         layer.quantizer[1].quantize()
                         Q = layer.quantizer[1].fake_w
                         layer.quantizer[0].fake_w = Q
@@ -127,10 +125,12 @@ def llama_sequential(model, algo, data, **kwargs):
                         layer.to(offload)
                         clear_mem()
                     else:
+
                         layer.remove_hook()
                         layer.quantize()
                         layer.set_default_quantizer(0)
-                        del layer.core.weight
+                        # del layer.core.weight
+                        layer.core.weight.data=layer.quantizer[0].fake_w
                         layer.to(offload)
                         clear_mem()
                 del subset
@@ -147,7 +147,6 @@ def llama_sequential(model, algo, data, **kwargs):
                 inputs, quant_outputs = quant_outputs, inputs
             else:
                 inputs, fp_outputs = fp_outputs, inputs
-                # del fp_outputs, inputs, quant_outputs
         clear_mem()
     model.config.use_cache = use_cache
     model = model.to(model_device)

@@ -24,6 +24,7 @@ from transformers.modeling_utils import no_init_weights
 from transformers.utils import ContextManagers, cached_file
 
 from quantization.__init__ import QuantizedModule
+from quantization.layers import LinearQuantHub
 
 
 def get_checkpoints(model_name_or_path: str, extensions: List[str], possible_model_basenames: List[str], **cached_file_kwargs):
@@ -100,12 +101,11 @@ class BaseModel():
         self.vision_model = None
         self.model_config = None
         self.config = config
-        self.use_cpu_to_save_cuda_mem_for_catcher = self.config.model.get('use_cpu_to_save_cuda_mem_for_catcher',
-                                                                          False)  # noqa
-        self.model_type = self.config.model.type
-        self.model_path = self.config.model.path
-        self.torch_dtype = self.config.model.torch_dtype
-        self.tokenizer_mode = self.config.model.get('tokenizer_mode', 'fast')
+
+        self.model_type = self.config.base_model.type
+        self.model_path = self.config.base_model.path
+        self.torch_dtype = self.config.base_model.torch_dtype
+        self.tokenizer_mode = self.config.base_model.get('tokenizer_mode', 'fast')
         self.model = None  # 子类加载具体模型
         self.tokenizer = None  # 子类加载具体tokenizer
         self.use_cache = use_cache
@@ -119,13 +119,24 @@ class BaseModel():
             if hasattr(self.model_config, 'use_cache'):
                 self.model_config.use_cache = False
 
-        self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_path,
-            config=self.model_config,
-            device_map=self.device_map,
-            trust_remote_code=True,
-            low_cpu_mem_usage=True,
-        )
+        if self.model_type=="auto":
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_path,
+                config=self.model_config,
+                device_map=self.device_map,
+                trust_remote_code=True,
+                torch_dtype=self.model_config.torch_dtype,
+                low_cpu_mem_usage=True,
+            )
+        else:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_path,
+                config=self.model_config,
+                device_map=self.device_map,
+                trust_remote_code=True,
+                torch_dtype=self.torch_dtype,
+                low_cpu_mem_usage=True,
+            )
         self.model.eval()
         return self.model
 
@@ -143,7 +154,7 @@ class BaseModel():
             self.tokenizer = None
         return  self.tokenizer
 
-    def replace_module(self,model, module_type=torch.nn.Linear, new_module_type=QuantizedModule, exclude_layers=[],
+    def replace_module(self,model, module_type=torch.nn.Linear, new_module_type=LinearQuantHub, exclude_layers=[],
                        include_layers=['.*'], display=False):
         if display:
             def count_children(module, name=''):
@@ -173,25 +184,24 @@ class BaseModel():
                     try:
                         setattr(module, child_name, new_module_type(mod, name=child_name))
                     except:
-                        setattr(module, child_name, new_module_type(mod))
+                        if new_module_type == "":
+                            setattr(module, child_name, mod.core)
+                        else:
+                            setattr(module, child_name, new_module_type(mod))
                 else:
                     transform_children(mod, name + child_name + '.')
 
         transform_children(model, name='')
         return model
 
-    def find_layers(self,module, layers, name=''):
-        if isinstance(layers, list):  # 如果 layers 是 list，就转成 tuple，方便 isinstance 判断
-            layers = tuple(layers)
-
-        if isinstance(module, layers):  # 如果当前 module 是目标类型层
-            return {name: module}  # 返回 {层的名字: 层对象}
-
-        res = {}  # 用来收集结果
-        for name1, child in module.named_children():  # 遍历当前 module 的子模块
-            res.update(self.find_layers(  # 递归向下搜索
-                child,
-                layers=layers,
-                name=name + '.' + name1 if name != '' else name1
-            ))
-        return res
+def find_layers(module, layers, name=''):
+    if isinstance(layers, list):
+        layers = tuple(layers)
+    if isinstance(module, layers):
+        return {name: module}
+    res = {}
+    for name1, child in module.named_children():
+        res.update(find_layers(
+            child, layers=layers, name=name + '.' + name1 if name != '' else name1
+        ))
+    return res

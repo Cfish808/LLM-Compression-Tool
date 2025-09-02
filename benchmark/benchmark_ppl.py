@@ -11,12 +11,13 @@ def main(args: argparse.Namespace):
     logging.info(args)
 
     # Initialize the model and tokenizer
-    if args.quantized_model:
+    if args.quantized_model and False:
         model = torch.load(args.quantized_model)
         model.eval()
         tokenizer = AutoTokenizer.from_pretrained(args.model)
     else:
         model = AutoModelForCausalLM.from_pretrained(args.model)
+        model=model.to(args.device)
         tokenizer = AutoTokenizer.from_pretrained(args.model)
 
     # Benchmark ceval
@@ -32,8 +33,8 @@ def main(args: argparse.Namespace):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate the model on ceval_benchmark.')
-    parser.add_argument('--model', type=str, default="/home/yejinyu/llama2_7b/Llama-2-7b-ms", help='Path to the model file or Huggingface model identifier.')
-    parser.add_argument('--quantized-model',default="/ssd/yejinyu/llama2_7b/output/llama27b_model_quant_tool_4.pt", help='Whether to use a quantized model.')
+    parser.add_argument('--model', type=str, default="/home/yejinyu/llama2_7b/output/llama27b_miom_2", help='Path to the model file or Huggingface model identifier.')
+    parser.add_argument('--quantized-model',default="/ssd/yejinyu/llama2_7b/output/llama27b_model_quant_tool2.pt", help='Whether to use a quantized model.')
     parser.add_argument('--device', type=str, default='cuda',  help='Device to run the model on.')
     parser.add_argument('--eval-tasks', nargs='+', default=["wikitext2"])
     parser.add_argument('--output-json', type=str, default=None, help='Path to save the ceval results in JSON format.')
