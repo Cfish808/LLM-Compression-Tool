@@ -3,8 +3,7 @@
 '''
 @Project ：model-quantification-tool 
 @File    ：load_dataset.py
-@Author  ：zxy
-@Date    ：2025/8/20 17:12 
+@Date    ：2025/8/20 17:12
 '''
 import random
 import numpy as np

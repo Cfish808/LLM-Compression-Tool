@@ -3,8 +3,7 @@
 '''
 @Project ：model-quantification-tool 
 @File    ：load_model.py
-@Author  ：zxy
-@Date    ：2025/8/20 15:12 
+@Date    ：2025/8/20 15:12
 '''
 import inspect
 import json

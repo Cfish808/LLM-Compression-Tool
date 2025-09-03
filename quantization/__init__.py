@@ -3,8 +3,7 @@
 '''
 @Project ：model-quantification-tool 
 @File    ：__init__.py
-@Author  ：zxy
-@Date    ：2025/8/25 16:15 
+@Date    ：2025/8/25 16:15
 '''
 
 import torch
