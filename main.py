@@ -21,28 +21,32 @@ def main(config):
     tokenizer = basemodel.build_tokenizer()
     model=basemodel.build_model()
 
-    new_model=basemodel.replace_module(model, exclude_layers=config["skip_layers"], include_layers=['.*'])
-    calibrate_config = {'name': config.calibrate_name, 'nsamples': 1, 'seqlen': config.seqlen}
-    calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=calibrate_config)
-    # calibrate=torch.load("calibrate.pt")
+    new_model=basemodel.replace_module(model, exclude_layers=config.quant.skip_layers, include_layers=['.*'])
+    # calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
+    calibrate=torch.load("calibrate.pt")
 
-    new_model=llama_sequential(model=new_model,data=calibrate,**dict(config))
+    new_model=llama_sequential(model=new_model,calibrate_data=calibrate,**config.quant)
     new_model = new_model.to("cuda")
     logger.info(f'model: {model}')
     logger.info(f'tokenizer: {tokenizer}')
-    benchmark = Benchmark()
-    results_ceval = benchmark.eval_ppl(new_model, tokenizer, nsamples='all', test_datasets=['wikitext2'])
-    # results_ceval = benchmark.eval_ceval(new_model, tokenizer,model_type="llama",subject="hm" )
-    logging.info("\n转换前:")
-    logging.info(results_ceval)
-    if config.save:
 
+
+
+    if config.save:
         model = basemodel.replace_module(new_model, module_type=LinearQuantHub, new_module_type="", display=True)
         model.save_pretrained(args.save)
         tokenizer.save_pretrained(args.save)
-        results_ceval = benchmark.eval_ppl(model, tokenizer, nsamples='all', test_datasets=['wikitext2'])
-        logging.info("\n转换后的模型:")
-        logging.info(results_ceval)
+
+    if config.eval:
+        eval_config=config.eval
+        benchmark = Benchmark()
+        model=model.to(eval_config.get('device',"cpu"))
+        if eval_config.ppl is not None and eval_config.ppl is not "":
+            results_ceval = benchmark.eval_ppl(model, tokenizer, nsamples=eval_config.nsamples,seqlen=eval_config.seq_len, test_datasets=eval_config.ppl)
+            logging.info("\n转换后的模型:")
+            logging.info(results_ceval)
+        else:
+            pass
 
 
 
@@ -63,7 +67,6 @@ if __name__ == '__main__':
     # 设置 HuggingFace 的缓存和镜像源
     os.environ['HF_HOME'] = '/home/yejinyu/huggingface_3_copy'
     os.environ['HF_DATASETS_CACHE'] = '/home/yejinyu/huggingface_3_copy'
-    os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
     os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 
