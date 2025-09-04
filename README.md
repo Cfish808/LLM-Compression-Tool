@@ -14,13 +14,10 @@ LLM Compression Tool is a project designed to optimize machine learning inferenc
     - [Install from Source](#install-from-source)
   - [Usage](#usage)
     - [Quick Start](#quick-start)
+    - [Quantization, Save and Evaluation](#quantization-save-evaluation)
     - [Quantization](#quantization)
     - [Evaluation](#evaluation)
     - [Inference](#inference)
-    - [Quantize \&\& Evaluation(Command-line)](#quantize--evaluationcommand-line)
-    - [Arguments](#arguments)
-    - [Example Command](#example-command)
-    - [Quantize \&\& Evaluation (Code)](#quantize--evaluation-code)
   - [OOD Benchmark Results](#ood-benchmark-results)
     - [Perplexity (PPL) of the LLaMA-2-7B Model](#perplexity-ppl-of-the-llama-2-7b-model)
     - [Evaluation Of Quantized Model Capabilities](#evaluation-of-quantized-model-capabilities)
@@ -37,36 +34,36 @@ Although LLMs excel in various NLP tasks, their computational and memory demands
 
 ## Features
 - Support for various quantization algorithms, including:
-  - RTN
-  - GPTQ
-  - AWQ
-  - OmniQuant
-  - SPQR
-  - OWQ
-  - SmoothQuant
-  - QuIP
-  - SqueezeLLM
-  - BiLLM
-  - QAT-LLM
-  - EfficientQAT
-  - PEQA
-  - QLoRA
-  - QA-LoRA
-  - IR-QLoRA
-  - LCQ
-  - OneBit
-  - mix-precision QAT
-  - Joint Sparsification and
+  - [ ] RTN 志炀
+  - [x] GPTQ  
+  - [ ] AWQ
+  - [ ] OmniQuant 博瀚
+  - [ ] SPQR 海达
+  - [ ] OWQ 海达
+  - [ ] SmoothQuant 博瀚
+  - [ ] QuIP 志炀
+  - [ ] SqueezeLLM
+  - [ ] BiLLM
+  - [ ] QAT-LLM
+  - [ ] EfficientQAT
+  - [ ] PEQA
+  - [ ] QLoRA
+  - [ ] QA-LoRA
+  - [ ] IR-QLoRA
+  - [ ] LCQ
+  - [ ] OneBit
+  - [ ] mix-precision QAT
+  - [ ] Joint Sparsification and
 Quantization (JSQ)
-  - GPTQ + AWQ
-  - SmoothQuant + GPTQ
+  - [ ] GPTQ + AWQ
+  - [ ] SmoothQuant + GPTQ
 -  Supports for various base model, including:
-    -  LLaMA
-    -  Qwen
-    -  deepseek
-    -  Mixtral
-    -  Qwen2-VL
-    -  LLaVA
+    - LLaMA
+    - Qwen
+    - deepseek
+    - Mixtral
+    - Qwen2-VL
+    - LLaVA
 -  Supports a variety of datasets for calibration and testing, including CEVAL, CMMLU, BOSS, lm-evaluation-harness, and user-provided custom datasets.
 - Allows combination of different quantization methods within the same model for enhanced performance and efficiency.
 - Offers tools for users to quantize and evaluate their own models, ensuring optimal performance tailored to specific needs.
@@ -109,224 +106,97 @@ Quantization (JSQ)
 ```
 python mian.py --config.yml config/llama_gptq.yml
 ```
-### Quantization 
+### Quantization, Save and Evaluation
 Below is an example of how to set up the quantization process for a model. For detailed information on all available quantization configuration options, please refer to the [quantization configuration guide](configs/README.md).
 ```
-import torch
-from transformers import AutoModelForCausalLM, LlamaTokenizer
-from mi_optimize import quantize
-from mi_optimize.export import export_module
+def main(config):
+    basemodel = BaseModel(config)
+    tokenizer = basemodel.build_tokenizer()
+    model=basemodel.build_model()
 
-# Define paths for the pre-trained model and quantized model
-model_path = 'meta-llama/Llama-2-7b-hf'
-quant_path = 'llama-2-7b-quant.pth'
+    new_model=basemodel.replace_module(model, exclude_layers=config.quant.skip_layers, include_layers=['.*'])
+    calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
 
-# Define quantization configuration
-quant_config = {
-    "algo": "rtn",
-    "kwargs": {
-        "w_dtype": "int4",           
-        "a_dtype": "float16",        
-        "device": "cuda",
-        "offload": "cpu",
-        "w_qtype": "per_channel",
-        "w_has_zero": False,
-        "w_unsign": True,
-        "quantization_type": "static",
-        "layer_sequential": True,
-        "skip_layers": [             
-            "lm_head"
-        ]
-    },
-    "calibrate_config": {
-        "name": "wikitext2",
-        "split": "train",
-        "nsamples": 1,
-        "seqlen": 2048
-    }}
+    new_model=llama_sequential(model=new_model, calibrate_data=calibrate, **config.quant)
+    new_model = new_model.to("cuda")
+    logger.info(f'model: {model}')
+    logger.info(f'tokenizer: {tokenizer}')
 
-# Load the pre-trained Hugging Face model
-model = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True).half().cuda()  
-tokenizer = LlamaTokenizer.from_pretrained(model_path)
+    if config.save:
+        model = basemodel.replace_module(new_model, module_type=LinearQuantHub, new_module_type="", display=True)
+        model.save_pretrained(args.save)
+        tokenizer.save_pretrained(args.save)
 
-# Quantize the model
-quantize_model = quantize(model=model, tokenizer=tokenizer, quant_config=quant_config)
+    if config.eval:
+        eval_config=config.eval
+        benchmark = Benchmark()
+        model=model.to(eval_config.get('device',"cpu"))
+        if eval_config.ppl is not None and eval_config.ppl is not "":
+            results_ceval = benchmark.eval_ppl(model, tokenizer, nsamples=eval_config.nsamples,seqlen=eval_config.seq_len, test_datasets=eval_config.ppl)
+            logging.info("\n转换后的模型:")
+            logging.info(results_ceval)
+        else:
+            pass
+```
 
-# print('model device', model.device)
-quantize_model.to('cuda')
-print(quantize_model)
-input_text = "Llama is a large language model"
-
-input_ids = tokenizer.encode(input_text, return_tensors="pt").to(quantize_model.device)
-
-output = model.generate(input_ids, max_length=20, num_return_sequences=1, do_sample= False)
-
-decoded_output = tokenizer.decode(output[0], skip_special_tokens=True)
-print(decoded_output)
-
-# Save the quantized model
-model = export_module(model)
-torch.save(model, quant_path)
+### Quantization
+Below is an example of how to quantize model on various datasets. 
+```
+base_model:
+    type: Llama
+    path: /home/yejinyu/llama2_7b/Llama-2-7b-ms
+    torch_dtype: auto
+    tokenizer_mode: fast
+quant:
+    method: gptq
+    skip_layers: [ lm_head ]
+    seqlen: 2048
+    device: cuda
+    weight:
+      wbit: 3
+      abit: 16
+      offload: cpu
+      block_sequential: False
+      layer_sequential: False
+      w_qtype: per_group
+      groupsize: 128
+      blocksize: 128
+      percdamp: 0.01
+      actorder: True
+    special:
+      actorder: True
+      static_groups: False
+      percdamp: 0.01
+      blocksize: 128
+      true_sequential: True
+    data:
+      name: c4
+      nsamples: 1
+      seqlen: 2048
+      download: True
+      path: eval data path
+      batch_size: 1
+      seed: 42
 ```
 
 ### Evaluation 
-Below is an example of how to evaluate a quantized model on various datasets. For a full explanation of all input parameters used in the evaluation functions, please refer to the [detailed parameter documentation](benchmark/PARAMETER_DETAILS.md).
+Below is an example of how to evaluate a quantized model on various datasets. 
 ```
-import torch
-from mi_optimize import Benchmark
-from transformers import LlamaTokenizer, AutoModelForCausalLM
-
-# model_path = 'meta-llama/Llama-2-7b-hf'
-quantize_model_path = 'llama-2-7b-quant.pth'
-# Load Benchmark
-benchmark = Benchmark()
-
-# Load Model && tokenizer
-tokenizer = LlamaTokenizer.from_pretrained(model_path)
-model = torch.load(quantize_model_path)
-#model = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True).half().cuda()
-
-# Evaluate Perplexity (PPL) on various datasets
-test_dataset = ['wikitext2']  
-results_ppl = benchmark.eval_ppl(model, tokenizer, test_dataset)
-print(results_ppl)
-
-# Evaluate the model on the ceval_benchmark
-results_ceval = benchmark.eval_ceval(model, tokenizer, model_type='baichuan', subject='all', num_shot=0)
-print(results_ceval)
-
-# Evaluate the model on the mmlu benchmark
-results_cmmlu = benchmark.eval_cmmlu(model, tokenizer, model_type='baichuan', subject='all', num_shot=0)
-print(results_cmmlu)
-
-# Evaluate the model on the BOSS benchmark
-results_boss = benchmark.eval_boss(model, tokenizer, test_dataset='QuestionAnswering_advqa', split='test', ICL_split='test', num_shot=0)
-print(results_boss)
-
-# Evaluate using lm-evaluation-harness
-eval_tasks = [
-    "winogrande",       
-    "piqa",             
-    "hellaswag",       
-]
-results_lm_evaluation = benchmark.eval_lmeval(model, tokenizer, eval_tasks, num_shot=5)
-print(results_lm_evaluation)
+eval:
+    task: [ppl]
+    dataset: [wikitext2,c4]
+    download: True
+    path: eval data path
+    seq_len: 2048
+    nsamples: all
+    device: cuda
+    seqlen: 2048
+    bs: 1
 ```
 
 ### Inference
-```
-import torch
-import time
-from transformers import LlamaTokenizer, TextGenerationPipeline
-from mi_optimize.export import qnn
 
-# Path to the quantized model
-quant_path = 'llama-2-7b-quant.pth'
 
-# Path to the tokenizer
-tokenizer_path = 'meta-llama/Llama-2-7b-hf'
-
-# Load the quantized model
-model = torch.load(quant_path)
-
-model = model.cuda()
-
-# Load the tokenizer
-tokenizer = LlamaTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
-
-# # Input prompt
-prompt = "Llama is a large language model"
-
-# # Tokenize the input prompt
-inputs_ids = tokenizer.encode(prompt, return_tensors='pt').cuda()
-
-# Choose the backend for inference ('naive', 'vllm', 'tensorrt')
-backend = 'naive'   
-
-if backend == 'naive':
-    start_time = time.time()
-    output = model.generate(inputs_ids, max_length=100, num_return_sequences=1, do_sample= False)
-    decoded_output = tokenizer.decode(output[0], skip_special_tokens=True)
-    print(decoded_output)
-    print(f'quantize time {time.time() - start_time}')
-
-elif backend == 'vllm':
-    pass  # This will be added soon
-```
-
-### Quantize && Evaluation(Command-line)
-To run the quantization and evaluation pipeline, use the provided `quantization.py` script. Below are the command-line arguments and an example command.
-
-### Arguments
-
-- `--model-path` (str): Path to the pre-trained language model (LLM) that you want to quantize.
-- `--algo` (str): Quantization algorithm to use. Choices: `rtn`, `gptq`, `awq`, `spqr`, `smoothquant`, `quip`.
-- `--wbit` (int): Number of bits for weight quantization.
-- `--abit` (int): Number of bits for activation quantization.
-- `--w-groupsize` (int): Group size for quantization. The group size determines how weights and activations are grouped together during the quantization process. (Options: 32, 64, 128)
-- `--benchmark` (str): Specifies the benchmark dataset to use for evaluation.
-- `--num-calibrate` (int): Number of samples used for calibration during the quantization process.
-- `--num-shot` (int): Number of few-shot examples used for evaluation.
-- `--calibrate-name` (str): Path to the calibration dataset used for quantization.
-- `--seqlen` (int): Sequence length for the input data.
-- `--device` (str): Device to run the quantization (e.g., `cuda:0`).
-- `--offload` (flag): Enables offloading to save memory during quantization.
-- `--skip-layers` (str): Specifies the layers to exclude from quantization.
-- `--block-sequential` (flag): Uses block-sequential quantization.
-- `--layer-sequential` (flag): Uses layer-sequential quantization.
-- `--half` (flag): Uses half-precision floating point during quantization.
-- `--save` (str): Path to save the quantized model after quantization.
-### Example Command
-
-```
-python examples/llama/quantization.py \
-    --model /home/user/models/Llama-2-7b-hf \
-    --algo awq \
-    --w-bits 4 \
-    --w-groupsize 128 \
-    --device cuda:0 \
-    --num-calibrate 128 \
-    --calibrate-name 'c4' \
-    --benchmark ppl \
-    --num-shot 1 \
-    --save /home/user/tmd-optimize/models
-```
-or
-```
-bash scripts/run_llama.sh
-```
-### Quantize && Evaluation (Code)
-For quantization and evaluation within your code, refer to the provided script and customize it according to your requirements. You can adjust the parameters and integrate them into your codebase for seamless quantization and evaluation.
-
-```
-from transformers import AutoModelForCausalLM, LlamaTokenizer
-from mi_optimize import quantize
-from mi_optimize import Benchmark
-
-# Define paths for the pre-trained model and quantized model
-model_path = 'meta-llama/Llama-2-7b-hf'
-quant_path = 'llama-2-7b-quant.pth'
-
-# Define quantization configuration
-quant_config = {
-    "algo": "rtn",
-    "kwargs": {'w_dtype': "int4", 'a_type': "float16"},
-    "calibrate_data": "wikitext2"  # select from  ['wikitext2', 'c4', 'ptb', 'cmmlu', 'cmmlu_hm', 'cmmlu_st', 'cmmlu_ss', 'NaturalLanguageInference_mnli']
- }
-
-# Load the pre-trained Hugging Face model
-model = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True).half()  
-tokenizer = LlamaTokenizer.from_pretrained(model_path)
-
-# Quantize the model
-model = quantize(model, quant_config=quant_config)
-
-benchmark = Benchmark()
-# Evaluate Perplexity (PPL) on various datasets
-test_dataset = ['wikitext2']  
-results_ppl = benchmark.eval_ppl(model, tokenizer, test_dataset)
-print(results_ppl)
-```
 ## OOD Benchmark Results
 Below are some test results obtained from the Out-of-Distribution (OOD) benchmark evaluation:
 

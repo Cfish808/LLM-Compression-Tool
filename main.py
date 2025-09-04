@@ -25,7 +25,7 @@ def main(config):
     # calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
     calibrate=torch.load("calibrate.pt")
 
-    new_model=llama_sequential(model=new_model,calibrate_data=calibrate,**config.quant)
+    new_model=llama_sequential(model=new_model, calibrate_data=calibrate, **config.quant)
     new_model = new_model.to("cuda")
     logger.info(f'model: {model}')
     logger.info(f'tokenizer: {tokenizer}')
