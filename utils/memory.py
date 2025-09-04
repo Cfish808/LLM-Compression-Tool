@@ -1,11 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-'''
-@Project ：model-quantification-tool 
-@File    ：memory.py
-@Author  ：zxy
-@Date    ：2025/8/25 17:11 
-'''
 """
 Memory management tool for CPU, GPU, and Disk tensors.
 """

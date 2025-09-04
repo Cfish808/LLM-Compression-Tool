@@ -40,38 +40,38 @@ class Benchmark:
                 
         return np.exp(total_loss / total_count)
     
-    def eval_wiki2_ppl(self, model, tokenizer, nsamples='all', split='test'):
+    def eval_wiki2_ppl(self, model, tokenizer, nsamples='all',seqlen=2048,  split='test'):
         logging.info("Evaluating Perplexity (PPL) on the wikitext2")
-        dataloader = get_wikitext2(tokenizer, nsamples=nsamples, split=split)
+        dataloader = get_wikitext2(tokenizer, nsamples=nsamples,seqlen=seqlen,  split=split)
         ppl = self.compute_ppl(model, tokenizer, dataloader)
         logging.info(f'wikitext2 PPL {ppl}')
         return ppl
     
-    def eval_ptb_ppl(self, model, tokenizer, nsamples='all', split='test'):
+    def eval_ptb_ppl(self, model, tokenizer, nsamples='all',seqlen=2048, split='test'):
         logging.info("Evaluating Perplexity (PPL) on the ptb")
-        dataloader = get_ptb(tokenizer, nsamples=nsamples, split=split)
+        dataloader = get_ptb(tokenizer, nsamples=nsamples, seqlen=seqlen, split=split)
         ppl = self.compute_ppl(model, tokenizer, dataloader)
         logging.info(f'ptb PPL {ppl}')
         return ppl
     
-    def eval_c4_ppl(self, model, tokenizer, nsamples='all', split='validation'):
+    def eval_c4_ppl(self, model, tokenizer, nsamples='all',seqlen=2048, split='validation'):
         logging.info("Evaluating Perplexity (PPL) on the c4")
-        dataloader = get_c4(tokenizer, nsamples=nsamples, split=split)
+        dataloader = get_c4(tokenizer, nsamples=nsamples, seqlen=seqlen, split=split)
         ppl = self.compute_ppl(model, tokenizer, dataloader)
         logging.info(f'c4 PPL {ppl}')
         return ppl
     
-    def eval_ppl(self, model, tokenizer, nsamples='all', test_datasets=['wikitext2']):
+    def eval_ppl(self, model, tokenizer, nsamples='all', seqlen=2048, test_datasets=['wikitext2']):
         logging.info("Evaluating Perplexity (PPL) on the wikitext2, c4, ptb dataset")
         results = {}
         if 'wikitext2' in test_datasets: 
-            wiki2_ppl = self.eval_wiki2_ppl(model, tokenizer, nsamples=nsamples)
+            wiki2_ppl = self.eval_wiki2_ppl(model, tokenizer, nsamples=nsamples, seqlen=seqlen)
             results['wikitext_ppl'] = wiki2_ppl
         if 'ptb' in  test_datasets:
-            ptb_ppl = self.eval_ptb_ppl(model, tokenizer, nsamples=nsamples)
+            ptb_ppl = self.eval_ptb_ppl(model, tokenizer, nsamples=nsamples, seqlen=seqlen)
             results['ptb_ppl'] = ptb_ppl
         if 'c4' in test_datasets:
-            c4_ppl = self.eval_c4_ppl(model, tokenizer, nsamples=nsamples)
+            c4_ppl = self.eval_c4_ppl(model, tokenizer, nsamples=nsamples, seqlen=seqlen)
             results['c4_ppl'] = c4_ppl
         return results
     

@@ -10,12 +10,12 @@ from ..__init__ import Precision, PRECISION_TO_BIT
 
 
 class LinearGPTQQuantizer(BaseQuantizer):
-    def __init__(self, quant_hub_linear, blocksize=128, w_groupsize=-1, percdamp=.01, actorder=True,
+    def __init__(self, quant_hub_linear, blocksize=128, groupsize=-1, percdamp=.01, actorder=True,
                  wbit=Precision.FP16, abit=Precision.FP16, w_qscheme=torch.per_channel_affine, w_qtype='per_channel',
                  offload='cpu', device='cuda', **kwarg) -> None:
         super().__init__(quant_hub_linear, wbit, abit, offload, device)
         self.blocksize = blocksize
-        self.groupsize = w_groupsize
+        self.groupsize = groupsize
         self.w_groupsize = self.groupsize
 
         self.nsamples = 0

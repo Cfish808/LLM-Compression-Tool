@@ -5,21 +5,18 @@ from tqdm import tqdm
 import pdb
 from quantization.gptq.GPTQQuantizer import LinearGPTQQuantizer
 from quantization.layers import LinearQuantHub
-from quantization.__init__ import QuantizedModule
-from quantization.util import replace_module, find_layers
+
+from utils.load_model import find_layers
 from utils.memory import clear_mem
 
 
 @torch.no_grad()
-def llama_sequential(model, algo, data, **kwargs):
+def llama_sequential(model, method, calibrate_data, **kwargs):
     device = kwargs.get('device', 'cuda')
-    offload = kwargs.get('offload', 'cpu')
-    block_sequential = kwargs.get('block_sequential', False)
-    layer_sequential = kwargs.get('layer_sequential', False)
-
+    offload = kwargs["weight"].get('offload', 'cpu')
+    block_sequential = kwargs["weight"].get('block_sequential', False)
+    layer_sequential = kwargs["weight"].get('layer_sequential', False)
     with torch.no_grad():
-
-        replace_module(model, exclude_layers=kwargs['skip_layers'], include_layers=['.*'])
         use_cache = model.config.use_cache
         model_device = model.device
         model.config.use_cache = False
@@ -46,7 +43,7 @@ def llama_sequential(model, algo, data, **kwargs):
                 raise ValueError
 
         layers[0] = Catcher(layers[0])
-        for batch in data:
+        for batch in calibrate_data:
             try:
                 model(batch.to(device))
             except ValueError:
@@ -68,7 +65,7 @@ def llama_sequential(model, algo, data, **kwargs):
         for i in range(len(layers)):
             block = layers[i].to(device)
             if not block_sequential:
-                for j in range(len(data)):
+                for j in range(len(calibrate_data)):
                     fp_outputs[j] = block(inputs[j].to(device),
                                           attention_mask=attention_mask[j] if attention_mask[j] == None else
                                           attention_mask[j].to(device), position_ids=position_ids[j].to(device))[0].to(
@@ -88,18 +85,18 @@ def llama_sequential(model, algo, data, **kwargs):
                 subset = {n: layer_linear[n] for n in names}
                 for name, layer in subset.items():
                     layer: LinearQuantHub
-                    if algo == 'gptq':
-                        layer.register_quantizer(LinearGPTQQuantizer(layer, **kwargs))
+                    if method == 'gptq':
+                        layer.register_quantizer(LinearGPTQQuantizer(layer, device=device, **kwargs["weight"]))
                     else:
-                        raise RuntimeError(f'No {algo} Quantizer!')
+                        raise RuntimeError(f'No {method} Quantizer!')
                     layer.prepare_hook()
 
-                for j in range(len(data)):
+                for j in range(len(calibrate_data)):
                     _ = block(inputs[j].to(device), attention_mask=attention_mask[j].to(device),
                               position_ids=position_ids[j].to(device))[0].to(offload)
 
                 for name, layer in tqdm(subset.items()):
-                    if algo == 'awq+gptq':
+                    if method == 'awq+gptq':
                         layer.remove_hook()
                         layer.quantizer[0].quantize()
                         smooth_factor = layer.quantizer[0].smooth_factor
@@ -113,12 +110,13 @@ def llama_sequential(model, algo, data, **kwargs):
                         del layer.quantizer[1], layer.core.weight
                         layer.to(offload)
                         clear_mem()
-                    elif algo == 'smoothquant+gptq':
+                    elif method == 'smoothquant+gptq':
                         layer.remove_hook()
                         layer.quantizer[0].quantize()
                         smooth_factors = layer.quantizer[0].smooth_factor
                         smooth_weight = layer.core.weight.data.mul(smooth_factors.view(1, -1))
                         layer.core.weight.data = smooth_weight.to(layer.core.weight.data)
+
                         layer.quantizer[1].quantize()
                         Q = layer.quantizer[1].fake_w
                         layer.quantizer[0].fake_w = Q
@@ -127,16 +125,18 @@ def llama_sequential(model, algo, data, **kwargs):
                         layer.to(offload)
                         clear_mem()
                     else:
+
                         layer.remove_hook()
                         layer.quantize()
                         layer.set_default_quantizer(0)
-                        del layer.core.weight
+                        # del layer.core.weight
+                        layer.core.weight.data = layer.quantizer[0].fake_w
                         layer.to(offload)
                         clear_mem()
                 del subset
 
             if block_sequential:
-                for j in range(len(data)):
+                for j in range(len(calibrate_data)):
                     quant_outputs[j] = block(inputs[j].to(device), attention_mask=attention_mask[j].to(device),
                                              position_ids=position_ids[j].to(device))[0].to(offload)
 
@@ -147,10 +147,7 @@ def llama_sequential(model, algo, data, **kwargs):
                 inputs, quant_outputs = quant_outputs, inputs
             else:
                 inputs, fp_outputs = fp_outputs, inputs
-                # del fp_outputs, inputs, quant_outputs
         clear_mem()
     model.config.use_cache = use_cache
     model = model.to(model_device)
     return model
-
-

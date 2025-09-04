@@ -1,8 +1,8 @@
-import torch
 import math
 import logging
-from torch import nn
-
+from statistics import mean
+import torch
+import torch.nn.functional as F
 from utils.memory import clear_mem
 
 
@@ -205,4 +205,6 @@ class Quantizer(torch.nn.Module):
                 "Unsupported quantization type. Use 'per_tensor', 'per_channel', or 'per_group'. or 'per_dimension' or 'per_token'")
 
         return dequantized_data, scales, zero_points
+
+
 
