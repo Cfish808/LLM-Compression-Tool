@@ -58,7 +58,7 @@ if __name__ == '__main__':
     os.environ['HF_HOME'] = '/home/yejinyu/huggingface_3_copy'
     os.environ['HF_DATASETS_CACHE'] = '/home/yejinyu/huggingface_3_copy'
     os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
-    os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+
 
     with open(args.config, 'r') as file:
         config = yaml.safe_load(file)
