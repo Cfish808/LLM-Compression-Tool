@@ -25,8 +25,8 @@ LLM Compression Tool is a project designed to optimize machine learning inferenc
 
 
 ## TODO
-- The code for the GPTQ implementation needs optimization. The current 3-bit perplexity (PPL) is around 8, which does not match the performance level of AutoGPTQ.
-- The supported base models should be expanded. The current implementation only supports LLaMA 2. Expanding to include other models would significantly improve the paper's contribution and relevance.
+- Multi-dimensional capability evaluation of quantized models.
+- Expansion of Post-Training Quantization (PTQ) methods.
 
 ## Introduction
 Although LLMs excel in various NLP tasks, their computational and memory demands may limit their deployment in real-time applications and on resource-constrained devices. This project addresses this challenge by employing quantization techniques to compress these models, ensuring they maintain performance while remaining adaptable to a wide range of scenarios. 
