@@ -17,12 +17,23 @@ from utils.load_model import BaseModel
 def main(config):
     basemodel = BaseModel(config)
     tokenizer = basemodel.build_tokenizer()
+<<<<<<< zxy
     model = basemodel.build_model()
     new_model = None
     if config.get("quant", False):
         new_model = basemodel.replace_module(model, exclude_layers=config.quant.skip_layers, include_layers=['.*'])
         calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
 
+    model=basemodel.build_model()
+
+    new_model=basemodel.replace_module(model, exclude_layers=config.quant.skip_layers, include_layers=['.*'])
+    # calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
+    calibrate=torch.load("calibrate.pt")
+
+    new_model=llama_sequential(model=new_model, calibrate_data=calibrate, **config.quant)
+    new_model = new_model.to("cuda")
+    logger.info(f'model: {model}')
+    logger.info(f'tokenizer: {tokenizer}')
 
         new_model = llama_sequential(model=new_model, calibrate_data=calibrate, **config.quant)
         logger.info(f'model: {model}')
