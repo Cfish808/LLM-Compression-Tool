@@ -8,6 +8,7 @@ from easydict import EasyDict
 from loguru import logger
 
 from eval.eval_by_category import run_evaluation
+from my_datasets import get_calibrate_loader
 from quantization.layers import LinearQuantHub
 from quantization.llama_seq import llama_sequential
 from utils.load_model import BaseModel
@@ -20,11 +21,10 @@ def main(config):
     new_model = None
     if config.get("quant", False):
         new_model = basemodel.replace_module(model, exclude_layers=config.quant.skip_layers, include_layers=['.*'])
-        # calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
-        calibrate = torch.load("calibrate.pt")
+        calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
+
 
         new_model = llama_sequential(model=new_model, calibrate_data=calibrate, **config.quant)
-        new_model = new_model.to("cuda")
         logger.info(f'model: {model}')
         logger.info(f'tokenizer: {tokenizer}')
 
