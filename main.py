@@ -6,47 +6,37 @@ import torch
 import yaml
 from easydict import EasyDict
 from loguru import logger
-import logging
 
+from eval.eval_by_category import run_evaluation
 from my_datasets import get_calibrate_loader
 from quantization.layers import LinearQuantHub
 from quantization.llama_seq import llama_sequential
-from utils.benchmark import Benchmark
 from utils.load_model import BaseModel
-
 
 
 def main(config):
     basemodel = BaseModel(config)
     tokenizer = basemodel.build_tokenizer()
-    model=basemodel.build_model()
-
-    new_model=basemodel.replace_module(model, exclude_layers=config.quant.skip_layers, include_layers=['.*'])
-    # calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
-    calibrate=torch.load("calibrate.pt")
-
-    new_model=llama_sequential(model=new_model, calibrate_data=calibrate, **config.quant)
-    new_model = new_model.to("cuda")
-    logger.info(f'model: {model}')
-    logger.info(f'tokenizer: {tokenizer}')
+    model = basemodel.build_model()
+    new_model = None
+    if config.get("quant", False):
+        new_model = basemodel.replace_module(model, exclude_layers=config.quant.skip_layers, include_layers=['.*'])
+        calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
 
 
+        new_model = llama_sequential(model=new_model, calibrate_data=calibrate, **config.quant)
+        logger.info(f'model: {model}')
+        logger.info(f'tokenizer: {tokenizer}')
 
-    if config.save:
+    if config.get("save", False) and config.get("quant", False):
         model = basemodel.replace_module(new_model, module_type=LinearQuantHub, new_module_type="", display=True)
         model.save_pretrained(args.save)
         tokenizer.save_pretrained(args.save)
 
-    if config.eval:
-        eval_config=config.eval
-        benchmark = Benchmark()
-        model=model.to(eval_config.get('device',"cpu"))
-        if eval_config.ppl is not None and eval_config.ppl is not "":
-            results_ceval = benchmark.eval_ppl(model, tokenizer, nsamples=eval_config.nsamples,seqlen=eval_config.seq_len, test_datasets=eval_config.ppl)
-            logging.info("\n转换后的模型:")
-            logging.info(results_ceval)
-        else:
-            pass
+    if config.get("eval", False):
+        eval_config = config.eval
+        model = model.to(eval_config.get('device', "cpu"))
+        run_evaluation(model, tokenizer, **eval_config)
 
 
 
