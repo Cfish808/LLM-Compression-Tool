@@ -67,6 +67,7 @@ if __name__ == '__main__':
     logger.info(f'args: {args}')
     logger.info(f'config:\n{json.dumps(config, ensure_ascii=False, indent=4)}')
 
+
     save_fake_path = os.path.join(config.save, 'output_models')
     mkdirs(save_fake_path)
 
@@ -75,10 +76,12 @@ if __name__ == '__main__':
 
     main(config)
 
+
     llmc_end_time = time.time()
     llmc_duration_time = llmc_end_time - llmc_start_time
     logger.info(f'llmc_duration_time: {llmc_duration_time} s')
     logger.info('--- llmc finished ---')
+
 
 # export HF_HOME=/home/yejinyu/huggingface_3_copy
 #
