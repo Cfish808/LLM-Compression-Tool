@@ -1,10 +1,10 @@
 
 base_model:
     type: Llama
-    path: /home/yejinyu/llama2_7b/Llama-2-7b-ms
+    path: /home/yejinyu/llama2_7b/output/llama27b_miom_2
     torch_dtype: auto
     tokenizer_mode: fast
-quant:
+quants:
     method: gptq
     skip_layers: [ lm_head ]
     seqlen: 2048
@@ -38,11 +38,14 @@ quant:
 
 eval:
 #    eval_pos: [pretrain, fake_quant]
-    task: None
-    ppl: [wikitext2,c4]
+    tasks: [CommonsenseReasoning]
+    datasets: [arc_easy]
     download: True
     path: eval data path
     seq_len: 2048
+    group_size: 128
+    batch_size: 32
+    num_fewshot: 0
     nsamples: all
     device: cuda
     seqlen: 2048
