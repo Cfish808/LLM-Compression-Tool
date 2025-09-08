@@ -1,0 +1,44 @@
+base_model:
+    type: Llama
+    path: /home/yubohan/models/Llama-2-7b-hf
+    torch_dtype: auto
+    tokenizer_mode: fast
+quant:
+    method: smoothquant
+    skip_layers: [ lm_head ]
+    seqlen: 2048
+    device: cuda
+    weight:
+      wbit: 8
+      abit: 8
+      offload: cpu
+      block_sequential: False
+      layer_sequential: False
+      w_qtype: per_channel
+      a_qtype: per_token
+      alpha: 0.5
+      quant_out: False
+    data:
+      name: c4
+      nsamples: 1
+      seqlen: 2048
+      download: True
+      path: eval data path
+      batch_size: 1
+      seed: 42
+eval:
+#    eval_pos: [pretrain, fake_quant]
+    tasks: [CommonsenseReasoning]
+    datasets: [arc_easy]
+    download: True
+    path: eval data path
+    seq_len: 2048
+    batch_size: 32
+    num_fewshot: 0
+    nsamples: all
+    device: cuda
+    seqlen: 2048
+    # For 7B / 13B model eval, bs can be set to "1", and inference_per_block can be set to "False".
+    # For 70B model eval, bs can be set to "20", and inference_per_block can be set to "True".
+    bs: 1
+save: /home/yubohan/code/model-quantification-tool/quant_output/llama2_7b/smoothquant

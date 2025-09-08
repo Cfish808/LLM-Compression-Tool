@@ -4,6 +4,7 @@ import logging
 from tqdm import tqdm
 import pdb
 from quantization.gptq.GPTQQuantizer import LinearGPTQQuantizer
+from quantization.smoothquant.SmoothQuantizer import LinearSmoothQuantizer
 from quantization.layers import LinearQuantHub
 
 from utils.load_model import find_layers
@@ -87,6 +88,8 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                     layer: LinearQuantHub
                     if method == 'gptq':
                         layer.register_quantizer(LinearGPTQQuantizer(layer, device=device, **kwargs["weight"]))
+                    elif method =='smoothquant':
+                        layer.register_quantizer(LinearSmoothQuantizer(layer, **kwargs))
                     else:
                         raise RuntimeError(f'No {method} Quantizer!')
                     layer.prepare_hook()
