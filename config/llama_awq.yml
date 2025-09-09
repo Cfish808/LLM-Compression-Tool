@@ -1,11 +1,11 @@
 
 base_model:
     type: Llama
-    path: /home/yejinyu/llama2_7b/output/llama27b_miom_2
+    path: /ssd/yejinyu/llama2_7b/Llama-2-7b-ms
     torch_dtype: auto
     tokenizer_mode: fast
 quant:
-    method: gptq
+    method: awq
     skip_layers: [ lm_head ]
     seqlen: 2048
     device: cuda
@@ -18,6 +18,10 @@ quant:
       w_qtype: per_group
       groupsize: 128
       blocksize: 128
+      w_has_zero: True
+      w_unsign: True
+      auto_scale: True
+      auto_clip: True
       percdamp: 0.01
       actorder: True
     special:
@@ -51,4 +55,4 @@ eval:
     # For 7B / 13B model eval, bs can be set to "1", and inference_per_block can be set to "False".
     # For 70B model eval, bs can be set to "20", and inference_per_block can be set to "True".
     bs: 1
-save: /home/yejinyu/llama2_7b/output/llama27b_miom_2
+save: /ssd/yejinyu/llama2_7b/output/llama27b_miom_awq

@@ -68,7 +68,7 @@ def _wrap_hflm(model, tokenizer=None, **hflm_kwargs):
 
 
 @torch.no_grad()
-def compute_ppl(model, tokenizer, loader):
+def compute_ppl(model, tokenizer, loader,**kwargs):
     total_loss = 0
     total_count = 0
     for batch in tqdm(loader):
@@ -88,7 +88,7 @@ def compute_ppl(model, tokenizer, loader):
     return np.exp(total_loss / total_count)
 
 
-def eval_wiki2_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test'):
+def eval_wiki2_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test',**kwargs):
     logging.info("Evaluating Perplexity (PPL) on the wikitext2")
     dataloader = get_wikitext2(tokenizer, nsamples=nsamples, seqlen=seqlen, split=split)
     ppl = compute_ppl(model, tokenizer, dataloader)
@@ -96,7 +96,7 @@ def eval_wiki2_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test'):
     return ppl
 
 
-def eval_ptb_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test'):
+def eval_ptb_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test',**kwargs):
     logging.info("Evaluating Perplexity (PPL) on the ptb")
     dataloader = get_ptb(tokenizer, nsamples=nsamples, seqlen=seqlen, split=split)
     ppl = compute_ppl(model, tokenizer, dataloader)
@@ -104,7 +104,7 @@ def eval_ptb_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test'):
     return ppl
 
 
-def eval_c4_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='validation'):
+def eval_c4_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='validation',**kwargs):
     logging.info("Evaluating Perplexity (PPL) on the c4")
     dataloader = get_c4(tokenizer, nsamples=nsamples, seqlen=seqlen, split=split)
     ppl = compute_ppl(model, tokenizer, dataloader)
