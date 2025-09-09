@@ -14,12 +14,13 @@ quant:
       offload: cpu
       block_sequential: False
       layer_sequential: False
+      w_groupsize: 128 
       w_qtype: per_channel
       a_qtype: per_token
-      alpha: 0.5
+      alpha: 0.85
       quant_out: False
     data:
-      name: c4
+      name: wikitext2
       nsamples: 1
       seqlen: 2048
       download: True
@@ -28,8 +29,8 @@ quant:
       seed: 42
 eval:
 #    eval_pos: [pretrain, fake_quant]
-    tasks: [CommonsenseReasoning]
-    datasets: [arc_easy]
+    tasks: [ppl]
+    datasets: [wikitext2]
     download: True
     path: eval data path
     seq_len: 2048
