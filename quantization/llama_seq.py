@@ -89,7 +89,7 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                     if method == 'gptq':
                         layer.register_quantizer(LinearGPTQQuantizer(layer, device=device, **kwargs["weight"]))
                     elif method =='smoothquant':
-                        layer.register_quantizer(LinearSmoothQuantizer(layer, **kwargs))
+                        layer.register_quantizer(LinearSmoothQuantizer(layer, device=device, **kwargs["weight"]))
                     else:
                         raise RuntimeError(f'No {method} Quantizer!')
                     layer.prepare_hook()
