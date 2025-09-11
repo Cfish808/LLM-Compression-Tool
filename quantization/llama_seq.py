@@ -3,6 +3,10 @@ from torch import nn
 import logging
 from tqdm import tqdm
 import pdb
+
+from transformers.quantizers.quantizer_awq import AwqQuantizer
+
+from quantization.AWQ.AWQQuantizer import LinearAwqQuantizer
 from quantization.gptq.GPTQQuantizer import LinearGPTQQuantizer
 from quantization.layers import LinearQuantHub
 
@@ -87,6 +91,8 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                     layer: LinearQuantHub
                     if method == 'gptq':
                         layer.register_quantizer(LinearGPTQQuantizer(layer, device=device, **kwargs["weight"]))
+                    elif method == 'awq':
+                        layer.register_quantizer(LinearAwqQuantizer(layer,  device=device, **kwargs["weight"]))
                     else:
                         raise RuntimeError(f'No {method} Quantizer!')
                     layer.prepare_hook()
@@ -96,43 +102,13 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                               position_ids=position_ids[j].to(device))[0].to(offload)
 
                 for name, layer in tqdm(subset.items()):
-                    if method == 'awq+gptq':
-                        layer.remove_hook()
-                        layer.quantizer[0].quantize()
-                        smooth_factor = layer.quantizer[0].smooth_factor
-                        smooth_weight = layer.core.weight.data.mul(smooth_factor)
-                        layer.core.weight.data = smooth_weight.to(layer.core.weight.device)
-                        layer.quantizer[1].quantize()
-                        Q = layer.quantizer[1].fake_w
-                        layer.quantizer[1].to(offload)
-                        layer.quantizer[0].fake_w = Q
-                        layer.set_default_quantizer(0)
-                        del layer.quantizer[1], layer.core.weight
-                        layer.to(offload)
-                        clear_mem()
-                    elif method == 'smoothquant+gptq':
-                        layer.remove_hook()
-                        layer.quantizer[0].quantize()
-                        smooth_factors = layer.quantizer[0].smooth_factor
-                        smooth_weight = layer.core.weight.data.mul(smooth_factors.view(1, -1))
-                        layer.core.weight.data = smooth_weight.to(layer.core.weight.data)
-
-                        layer.quantizer[1].quantize()
-                        Q = layer.quantizer[1].fake_w
-                        layer.quantizer[0].fake_w = Q
-                        layer.set_default_quantizer(0)
-                        del layer.quantizer[1], layer.core.weight
-                        layer.to(offload)
-                        clear_mem()
-                    else:
-
-                        layer.remove_hook()
-                        layer.quantize()
-                        layer.set_default_quantizer(0)
-                        # del layer.core.weight
-                        layer.core.weight.data = layer.quantizer[0].fake_w
-                        layer.to(offload)
-                        clear_mem()
+                    layer.remove_hook()
+                    layer.quantize()
+                    layer.set_default_quantizer(0)
+                    # del layer.core.weight
+                    layer.core.weight.data = layer.quantizer[0].fake_w
+                    layer.to(offload)
+                    clear_mem()
                 del subset
 
             if block_sequential:
