@@ -147,6 +147,7 @@ def run_evaluation(
                     test_task_name.append(dataname)
             if not tmp_task:
                 tmp_task = TASK_CATEGORIES[task]
+                test_task_name.extend(tmp_task)
             task_list = _unique_keep_order(tmp_task)
             results = evaluate_model(model=model, tokenizer=tokenizer, task_list=task_list, **kwargs)
             total_acc = 0
