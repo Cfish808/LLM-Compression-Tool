@@ -10,7 +10,7 @@ quant:
     seqlen: 2048
     device: cuda
     weight:
-      wbit: 3
+      wbit: 2
       abit: 16
       offload: cpu
       block_sequential: False
@@ -32,7 +32,7 @@ quant:
       true_sequential: True
     data:
       name: c4
-      nsamples: 1
+      nsamples: 128
       seqlen: 2048
       download: True
       path: eval data path
@@ -42,8 +42,8 @@ quant:
 
 eval:
 #    eval_pos: [pretrain, fake_quant]
-    tasks: [ppl,CommonsenseReasoning]
-    datasets: [wikitext2,arc_easy]
+    tasks: [ppl]
+    datasets: [c4]
     download: True
     path: eval data path
     seq_len: 2048

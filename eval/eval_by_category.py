@@ -136,7 +136,6 @@ def run_evaluation(
                 if "wikitext2" in datasets:
                     test_task_name.append("wikitext2")
                     eval_wiki2_ppl(model, tokenizer, **kwargs)
-
                 if "ptb" in datasets:
                     test_task_name.append("ptb")
                     eval_ptb_ppl(model, tokenizer, **kwargs)
@@ -148,6 +147,7 @@ def run_evaluation(
                     test_task_name.append(dataname)
             if not tmp_task:
                 tmp_task = TASK_CATEGORIES[task]
+                test_task_name.extend(tmp_task)
             task_list = _unique_keep_order(tmp_task)
             results = evaluate_model(model=model, tokenizer=tokenizer, task_list=task_list, **kwargs)
             total_acc = 0
@@ -179,7 +179,7 @@ def run_evaluation(
         except:
             pass
 
-    if not task_list:
+    if not test_task_name:
         raise ValueError("Empty task list to evaluate.")
     not_in_datasets = [x for x in datasets if x not in test_task_name]
     if not_in_datasets:

@@ -1,10 +1,7 @@
 import torch
 from torch import nn
-import logging
 from tqdm import tqdm
-import pdb
 
-from transformers.quantizers.quantizer_awq import AwqQuantizer
 
 from quantization.AWQ.AWQQuantizer import LinearAwqQuantizer
 from quantization.gptq.GPTQQuantizer import LinearGPTQQuantizer
@@ -52,6 +49,10 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                 model(batch.to(device))
             except ValueError:
                 pass
+
+
+
+
 
         inputs = layers[0].inputs
         attention_mask = layers[0].attention_mask
