@@ -15,9 +15,6 @@ quant:
       offload: cpu
       block_sequential: True
       layer_sequential: True
-      blocksize: 128
-      percdamp: 0.01
-      actorder: True
       w_has_zero: False
       a_has_zero: True
       w_unsign: False
