@@ -27,12 +27,6 @@ quant:
       a_qtype: "per_token"  #select from ["per_tensor", "per_token", "per_group", "per_dimension"]                 
       w_qtype: "per_group"  # select from ["per_tensor", "per_channel", "per_group"]             
       quantization_type: 'static'
-    special:
-      actorder: True
-      static_groups: False
-      percdamp: 0.01
-      blocksize: 128
-      true_sequential: True
     data:
       name: c4
       nsamples: 1
@@ -45,7 +39,6 @@ quant:
 
 
 eval:
-#    eval_pos: [pretrain, fake_quant]
     tasks: [ppl]
     datasets: [wikitext2]
     download: True
