@@ -4,7 +4,7 @@ import logging
 from tqdm import tqdm
 import pdb
 
-
+from transformers.quantizers.quantizer_awq import AwqQuantizer
 
 from quantization.AWQ.AWQQuantizer import LinearAwqQuantizer
 from quantization.gptq.GPTQQuantizer import LinearGPTQQuantizer
