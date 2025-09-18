@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 from quantization.AWQ.AWQQuantizer import LinearAwqQuantizer
 from quantization.gptq.GPTQQuantizer import LinearGPTQQuantizer
+from quantization.rtn.RTNQuantizer import LinearRTNQuantizer
 from quantization.layers import LinearQuantHub
 
 from utils.load_model import find_layers
@@ -94,6 +95,9 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                         layer.register_quantizer(LinearGPTQQuantizer(layer, device=device, **kwargs["weight"]))
                     elif method == 'awq':
                         layer.register_quantizer(LinearAwqQuantizer(layer,  device=device, **kwargs["weight"]))
+                    elif method == 'rtn':
+                        layer.register_quantizer(LinearRTNQuantizer(layer,  device=device, **kwargs["weight"]))
+                    
                     else:
                         raise RuntimeError(f'No {method} Quantizer!')
                     layer.prepare_hook()
