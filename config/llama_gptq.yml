@@ -53,4 +53,4 @@ eval:
     # For 7B / 13B model eval, bs can be set to "1", and inference_per_block can be set to "False".
     # For 70B model eval, bs can be set to "20", and inference_per_block can be set to "True".
     bs: 1
-save: /home/yubohan/code/model-quantification-tool/quant_output/llama2_7b/gptq
+save: /home/yejinyu/llama2_7b/output/llama27b_miom_2
