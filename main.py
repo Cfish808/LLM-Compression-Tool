@@ -6,11 +6,6 @@ import torch
 import yaml
 from easydict import EasyDict
 from loguru import logger
-import os
-# 设置 HuggingFace 的缓存和镜像源
-os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
-os.environ['HF_HOME'] = '/home/yubohan/huggingface'
-os.environ['HF_DATASETS_CACHE'] = '/home/yubohan/huggingface'
 
 from eval.eval_by_category import run_evaluation
 from my_datasets import get_calibrate_loader
@@ -33,10 +28,10 @@ def main(config):
         logger.info(f'model: {model}')
         logger.info(f'tokenizer: {tokenizer}')
 
-    # if config.get("save", False) and config.get("quant", False):
-    #     model = basemodel.replace_module(new_model, module_type=LinearQuantHub, new_module_type="", display=True)
-    #     model.save_pretrained(args.save)
-    #     tokenizer.save_pretrained(args.save)
+    if config.get("save", False) and config.get("quant", False):
+        model = basemodel.replace_module(new_model, module_type=LinearQuantHub, new_module_type="", display=True)
+        model.save_pretrained(args.save)
+        tokenizer.save_pretrained(args.save)
 
     if config.get("eval", False):
         eval_config = config.eval
@@ -57,7 +52,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default="/home/yejinyu/model-quantification-tool/config/llama_gptq.yml", type=str)
     args = parser.parse_args()
-    
+    import os
+
+    # 设置 HuggingFace 的缓存和镜像源
+    os.environ['HF_HOME'] = '/home/yejinyu/huggingface_3_copy'
+    os.environ['HF_DATASETS_CACHE'] = '/home/yejinyu/huggingface_3_copy'
+    os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+
+
     with open(args.config, 'r') as file:
         config = yaml.safe_load(file)
     config = EasyDict(config)
