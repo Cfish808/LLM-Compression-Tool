@@ -4,8 +4,3 @@ quantization/base_quantization.py
 quantization/GPTQ.py
 benchmark
 utils/benchmark.py
-logs/
-model_quantification_tool.egg-info/
-setup.py
-*_pycache_*
-quantization/test.py
