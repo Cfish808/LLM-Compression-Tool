@@ -1,10 +1,12 @@
 import torch
 from torch import nn
-import logging
 from tqdm import tqdm
-import pdb
+
+
+from quantization.AWQ.AWQQuantizer import LinearAwqQuantizer
 from quantization.gptq.GPTQQuantizer import LinearGPTQQuantizer
 from quantization.smoothquant.SmoothQuantizer import LinearSmoothQuantizer
+from quantization.rtn.RTNQuantizer import LinearRTNQuantizer
 from quantization.layers import LinearQuantHub
 
 from utils.load_model import find_layers
@@ -50,6 +52,10 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
             except ValueError:
                 pass
 
+
+
+
+
         inputs = layers[0].inputs
         attention_mask = layers[0].attention_mask
         position_ids = layers[0].position_ids
@@ -90,6 +96,11 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                         layer.register_quantizer(LinearGPTQQuantizer(layer, device=device, **kwargs["weight"]))
                     elif method =='smoothquant':
                         layer.register_quantizer(LinearSmoothQuantizer(layer, device=device, **kwargs["weight"]))
+                    elif method == 'awq':
+                        layer.register_quantizer(LinearAwqQuantizer(layer,  device=device, **kwargs["weight"]))
+                    elif method == 'rtn':
+                        layer.register_quantizer(LinearRTNQuantizer(layer,  device=device, **kwargs["weight"]))
+                    
                     else:
                         raise RuntimeError(f'No {method} Quantizer!')
                     layer.prepare_hook()
@@ -99,43 +110,13 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                               position_ids=position_ids[j].to(device))[0].to(offload)
 
                 for name, layer in tqdm(subset.items()):
-                    if method == 'awq+gptq':
-                        layer.remove_hook()
-                        layer.quantizer[0].quantize()
-                        smooth_factor = layer.quantizer[0].smooth_factor
-                        smooth_weight = layer.core.weight.data.mul(smooth_factor)
-                        layer.core.weight.data = smooth_weight.to(layer.core.weight.device)
-                        layer.quantizer[1].quantize()
-                        Q = layer.quantizer[1].fake_w
-                        layer.quantizer[1].to(offload)
-                        layer.quantizer[0].fake_w = Q
-                        layer.set_default_quantizer(0)
-                        del layer.quantizer[1], layer.core.weight
-                        layer.to(offload)
-                        clear_mem()
-                    elif method == 'smoothquant+gptq':
-                        layer.remove_hook()
-                        layer.quantizer[0].quantize()
-                        smooth_factors = layer.quantizer[0].smooth_factor
-                        smooth_weight = layer.core.weight.data.mul(smooth_factors.view(1, -1))
-                        layer.core.weight.data = smooth_weight.to(layer.core.weight.data)
-
-                        layer.quantizer[1].quantize()
-                        Q = layer.quantizer[1].fake_w
-                        layer.quantizer[0].fake_w = Q
-                        layer.set_default_quantizer(0)
-                        del layer.quantizer[1], layer.core.weight
-                        layer.to(offload)
-                        clear_mem()
-                    else:
-
-                        layer.remove_hook()
-                        layer.quantize()
-                        layer.set_default_quantizer(0)
-                        # del layer.core.weight
-                        layer.core.weight.data = layer.quantizer[0].fake_w
-                        layer.to(offload)
-                        clear_mem()
+                    layer.remove_hook()
+                    layer.quantize()
+                    layer.set_default_quantizer(0)
+                    # del layer.core.weight
+                    layer.core.weight.data = layer.quantizer[0].fake_w
+                    layer.to(offload)
+                    clear_mem()
                 del subset
 
             if block_sequential:

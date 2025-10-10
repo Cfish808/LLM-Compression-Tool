@@ -68,7 +68,7 @@ def _wrap_hflm(model, tokenizer=None, **hflm_kwargs):
 
 
 @torch.no_grad()
-def compute_ppl(model, tokenizer, loader):
+def compute_ppl(model, tokenizer, loader,**kwargs):
     total_loss = 0
     total_count = 0
     for batch in tqdm(loader):
@@ -88,7 +88,7 @@ def compute_ppl(model, tokenizer, loader):
     return np.exp(total_loss / total_count)
 
 
-def eval_wiki2_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test', **kwargs):
+def eval_wiki2_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test',**kwargs):
     logging.info("Evaluating Perplexity (PPL) on the wikitext2")
     dataloader = get_wikitext2(tokenizer, nsamples=nsamples, seqlen=seqlen, split=split)
     ppl = compute_ppl(model, tokenizer, dataloader)
@@ -96,7 +96,7 @@ def eval_wiki2_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test', 
     return ppl
 
 
-def eval_ptb_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test'):
+def eval_ptb_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test',**kwargs):
     logging.info("Evaluating Perplexity (PPL) on the ptb")
     dataloader = get_ptb(tokenizer, nsamples=nsamples, seqlen=seqlen, split=split)
     ppl = compute_ppl(model, tokenizer, dataloader)
@@ -104,7 +104,7 @@ def eval_ptb_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test'):
     return ppl
 
 
-def eval_c4_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='validation', **kwargs):
+def eval_c4_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='validation',**kwargs):
     logging.info("Evaluating Perplexity (PPL) on the c4")
     dataloader = get_c4(tokenizer, nsamples=nsamples, seqlen=seqlen, split=split)
     ppl = compute_ppl(model, tokenizer, dataloader)
@@ -136,7 +136,6 @@ def run_evaluation(
                 if "wikitext2" in datasets:
                     test_task_name.append("wikitext2")
                     eval_wiki2_ppl(model, tokenizer, **kwargs)
-
                 if "ptb" in datasets:
                     test_task_name.append("ptb")
                     eval_ptb_ppl(model, tokenizer, **kwargs)
@@ -148,6 +147,7 @@ def run_evaluation(
                     test_task_name.append(dataname)
             if not tmp_task:
                 tmp_task = TASK_CATEGORIES[task]
+                test_task_name.extend(tmp_task)
             task_list = _unique_keep_order(tmp_task)
             results = evaluate_model(model=model, tokenizer=tokenizer, task_list=task_list, **kwargs)
             total_acc = 0
@@ -179,7 +179,7 @@ def run_evaluation(
         except:
             pass
 
-    if not task_list:
+    if not test_task_name:
         raise ValueError("Empty task list to evaluate.")
     not_in_datasets = [x for x in datasets if x not in test_task_name]
     if not_in_datasets:

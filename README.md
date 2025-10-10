@@ -25,8 +25,19 @@ LLM Compression Tool is a project designed to optimize machine learning inferenc
 
 
 ## TODO
-- Multi-dimensional capability evaluation of quantized models.
-- Expansion of Post-Training Quantization (PTQ) methods.
+- AWQ Method Comparison and Optimization: We will conduct comparative experiments with the AWQ method and perform subsequent optimization to further improve our approach.
+- BiLLM.
+
+![](assets/17581806412968.jpg)
+           Fig1. Schematic of the PTQ binarization framework for LLMs
+     
+![](assets/17581807124867.jpg)
+     Fig2. Illustration of salient weight binarization
+     
+     Tab1. PPL result
+![](assets/17581819866630.jpg)
+
+
 
 ## Introduction
 Although LLMs excel in various NLP tasks, their computational and memory demands may limit their deployment in real-time applications and on resource-constrained devices. This project addresses this challenge by employing quantization techniques to compress these models, ensuring they maintain performance while remaining adaptable to a wide range of scenarios. 
@@ -34,15 +45,14 @@ Although LLMs excel in various NLP tasks, their computational and memory demands
 
 ## Features
 - Support for various quantization algorithms, including:
-  - [ ] RTN 志炀
+  - [x] RTN 志炀
   - [x] GPTQ  
-  - [ ] AWQ
+  - [x] AWQ
   - [ ] OmniQuant 博瀚
   - [ ] SPQR 海达
   - [ ] OWQ 海达
-  - [ ] SmoothQuant 博瀚
+  - [x] SmoothQuant 博瀚
   - [ ] QuIP 志炀
-  - [ ] SqueezeLLM
   - [ ] BiLLM
   - [ ] QAT-LLM
   - [ ] EfficientQAT
@@ -201,6 +211,63 @@ eval:
 Below are some test results obtained from the Out-of-Distribution (OOD) benchmark evaluation:
 
 ### Perplexity (PPL) of the LLaMA-2-7B Model
+
+<table>
+  <thead>
+    <tr>
+      <th></th>
+      <th>bit-width</th>
+      <th>wikitext2</th>
+      <th>c4</th>
+      <th></th>
+      <th>bit-width</th>
+      <th>wikitext2</th>
+      <th>c4</th>
+      <th></th>
+      <th>bit-width</th>
+      <th>wikitext2</th>
+      <th>c4</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="3">Model_quant_tool AWQ</td>
+      <td>W2A16</td>
+      <td>206385.3</td>
+      <td>150178.06</td>
+      <td rowspan="3">AWQ</td>
+      <td>W2A16</td>
+      <td>222486.37</td>
+      <td>168183.6</td>
+      <td rowspan="3">LLMC AWQ</td>
+      <td>W2A16</td>
+      <td>nan</td>
+      <td>8895.39</td>
+    </tr>
+    <tr>
+      <td>W3A16</td>
+      <td>6.54</td>
+      <td>8.72</td>
+      <td>W3A16</td>
+      <td>6.25</td>
+      <td>8.23</td>
+      <td>W3A16</td>
+      <td>6.67</td>
+      <td>8.88</td>
+    </tr>
+    <tr>
+      <td>W4A16</td>
+      <td>5.77</td>
+      <td>7.62</td>
+      <td>W4A16</td>
+      <td>5.6</td>
+      <td>7.39</td>
+      <td>W4A16</td>
+      <td>5.66</td>
+      <td>7.5</td>
+    </tr>
+  </tbody>
+</table>
 
 
 ### Evaluation Of Quantized Model Capabilities

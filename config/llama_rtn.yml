@@ -1,11 +1,11 @@
 
 base_model:
     type: Llama
-    path: /ssd/yejinyu/llama2_7b/Llama-2-7b-ms
+    path: /home/xzy/Llama-2-7b-hf
     torch_dtype: auto
     tokenizer_mode: fast
 quant:
-    method: gptq
+    method: rtn
     skip_layers: [ lm_head ]
     seqlen: 2048
     device: cuda
@@ -13,35 +13,31 @@ quant:
       wbit: 4
       abit: 16
       offload: cpu
-      block_sequential: False
-      layer_sequential: False
-      w_qtype: per_group
-      groupsize: 128
-      blocksize: 128
-      percdamp: 0.01
-      actorder: True
-    special:
-      actorder: True
-      static_groups: False
-      percdamp: 0.01
-      blocksize: 128
-      true_sequential: True
+      block_sequential: True
+      layer_sequential: True
+      w_has_zero: False
+      a_has_zero: True
+      w_unsign: False
+      a_unsign: False
+      w_groupsize: 128
+      a_groupsize: -1
+      a_qtype: "per_token"  #select from ["per_tensor", "per_token", "per_group", "per_dimension"]                 
+      w_qtype: "per_group"  # select from ["per_tensor", "per_channel", "per_group"]             
+      quantization_type: 'static'
     data:
       name: c4
-      nsamples: 128
+      nsamples: 1
       seqlen: 2048
       download: True
       path: eval data path
-      batch_size: 1
+      batch_size: 32
       seed: 42
+      split: validation
 
 
 eval:
-#    eval_pos: [pretrain, fake_quant]
-#    tasks: [ppl,CommonsenseReasoning]
-#    datasets: [wikitext2,c4]
     tasks: [ppl]
-    datasets: [c4]
+    datasets: [wikitext2]
     download: True
     path: eval data path
     seq_len: 2048
@@ -53,4 +49,4 @@ eval:
     # For 7B / 13B model eval, bs can be set to "1", and inference_per_block can be set to "False".
     # For 70B model eval, bs can be set to "20", and inference_per_block can be set to "True".
     bs: 1
-save: /home/yubohan/code/model-quantification-tool/quant_output/llama2_7b/gptq
+save: /home/xzy/output/llama2_7b_rtn
