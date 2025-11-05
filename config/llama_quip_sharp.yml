@@ -1,0 +1,103 @@
+base_model:
+    type: Llama
+    path: /home/xzy/Llama-2-7b-hf
+    torch_dtype: auto
+    tokenizer_mode: fast
+
+quant:
+  method: quip_sharp
+  skip_layers: [ lm_head ]
+  main:
+    seed: 0
+    num_cpu_threads: 4
+    base_model: /home/xzy/Llama-2-7b-hf
+    save_path: /home/xzy/output/outputs_q
+    hessian_path: /home/xzy/output/hessians/llama2_7b
+    quantized_path: /home/xzy/output/outputs_q
+    hf_path: /home/xzy/output/outputs_q_hf
+    ckpt_path: /home/xzy/output/outputs_q
+    hf_ft_path: /home/xzy/output/outputs_q_hf_ft_hf
+    enable_hessian: true
+    enable_quantize: true
+    enable_finetune: true
+    enable_hfize: true
+  hessian:
+    batch_size: 4
+    devset_size: 6144
+    ctx_size: 2048
+    scratch_path: null
+    chunk_size: 256
+    async_copy_speed: -1
+    act_save_rate: 4
+    save_activations: false
+    sample_proc: 1
+  quantize:
+    batch_size: 16
+    devset_size: 384
+    ctx_size: 4096
+    sigma_reg: 0.01
+    sigma_reg2: 0.01
+    incoh_mode: had
+    lora_rank: 0
+    scale_override: 0.9
+    resid_scale_override: -1
+    codebook: E8P12
+    quip_tune_iters: 10
+    use_fp64: false
+    full_svd: false
+    no_use_buffered: false
+    rescale_WH: false
+    sample_proc: 1
+    lowmem_ldlq: false
+    ft_lr: 0.00005
+    ft_susv_lr: 0.0005
+    ft_bs: 4
+    ft_update_freq: 2
+    ft_epochs: 5
+    ft_valid_freq: 1
+    ft_valid_size: 128
+    ft_early_stop: 3
+    ft_train_mode: false
+    ft_grad_ckpt: false
+  finetune:
+    batch_size: 16
+    devset_size: 384
+    ctx_size: 4096
+    sample_proc: 1
+    ft_lr: 0.00001
+    ft_susv_lr: 0.0001
+    ft_bs: 1
+    ft_update_freq: 2
+    ft_epochs: 8
+    ft_valid_freq: 1
+    ft_valid_size: 128
+    ft_early_stop: 3
+    ft_train_mode: false
+    ft_grad_ckpt: false
+    ft_nshards: -1
+  data:
+    name: c4
+    nsamples: 128
+    seqlen: 2048
+    download: True
+    path: /home/xzy/huggingface_copy/allenai___c4
+    batch_size: 16
+    seed: 42
+    split: validation
+
+
+eval:
+    tasks: [ppl]
+    datasets: [wikitext2]
+    download: True
+    path: eval data path
+    seq_len: 2048
+    batch_size: 32
+    num_fewshot: 0
+    nsamples: all
+    device: cuda
+    seqlen: 2048
+    # For 7B / 13B model eval, bs can be set to "1", and inference_per_block can be set to "False".
+    # For 70B model eval, bs can be set to "20", and inference_per_block can be set to "True".
+    bs: 1
+save: /home/xzy/output/llama2_7b_quip

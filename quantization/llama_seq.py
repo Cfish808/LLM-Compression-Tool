@@ -9,6 +9,8 @@ from transformers.quantizers.quantizer_awq import AwqQuantizer
 from quantization.AWQ.AWQQuantizer import LinearAwqQuantizer
 from quantization.gptq.GPTQQuantizer import LinearGPTQQuantizer
 from quantization.rtn.RTNQuantizer import LinearRTNQuantizer
+from quantization.Quip.QuipQuantizer import LinearQuipQuantizer
+from quantization.quip_sharp.quantize_llama.complete_quantize_finetune_llama import quip_sharp_main
 from quantization.layers import LinearQuantHub
 
 from utils.load_model import find_layers
@@ -17,6 +19,8 @@ from utils.memory import clear_mem
 
 @torch.no_grad()
 def llama_sequential(model, method, calibrate_data, **kwargs):
+    if method == 'quip_sharp':
+        return quip_sharp_main(kwargs['main'], kwargs['hessian'], kwargs['quantize'], kwargs['finetune'])
     device = kwargs.get('device', 'cuda')
     offload = kwargs["weight"].get('offload', 'cpu')
     block_sequential = kwargs["weight"].get('block_sequential', False)
@@ -96,7 +100,8 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                         layer.register_quantizer(LinearAwqQuantizer(layer,  device=device, **kwargs["weight"]))
                     elif method == 'rtn':
                         layer.register_quantizer(LinearRTNQuantizer(layer,  device=device, **kwargs["weight"]))
-                    
+                    elif method == 'quip':
+                        layer.register_quantizer(LinearQuipQuantizer(layer,  device=device, **kwargs["weight"]))
                     else:
                         raise RuntimeError(f'No {method} Quantizer!')
                     layer.prepare_hook()
