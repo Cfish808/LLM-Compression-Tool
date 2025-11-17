@@ -13,7 +13,6 @@ from .quantize.omniquant import omniquant
 from tqdm import tqdm
 import utils
 from pathlib import Path
-from .categories import subcategories, categories
 import pdb
 from easydict import EasyDict
 
