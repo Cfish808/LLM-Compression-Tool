@@ -19,8 +19,6 @@ from utils.memory import clear_mem
 
 @torch.no_grad()
 def llama_sequential(model, method, calibrate_data, **kwargs):
-    if method == 'quip_sharp':
-        return quip_sharp_main(kwargs['main'], kwargs['hessian'], kwargs['quantize'], kwargs['finetune'])
     device = kwargs.get('device', 'cuda')
     offload = kwargs["weight"].get('offload', 'cpu')
     block_sequential = kwargs["weight"].get('block_sequential', False)
@@ -136,3 +134,7 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
     model.config.use_cache = use_cache
     model = model.to(model_device)
     return model
+
+def llama_quipsharp(calibrate,kwargs):
+    return quip_sharp_main(calibrate,kwargs)
+

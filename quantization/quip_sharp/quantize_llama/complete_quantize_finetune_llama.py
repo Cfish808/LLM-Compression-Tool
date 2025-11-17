@@ -8,15 +8,8 @@
 4. hfize_llama.py - HuggingFace 模型转换
 """
 
-import sys; sys.path.append('/home/xzy/model-quantification-tool/quantization/quip_sharp')
 import os
 from tqdm import tqdm
-os.environ['HF_HOME'] = '/home/xzy/huggingface_copy'
-os.environ['HF_DATASETS_CACHE'] = '/home/xzy/huggingface_copy'
-os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
-# os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7"
 from types import SimpleNamespace
 import datetime
 import random
@@ -45,7 +38,6 @@ from lib.algo import finetune, quip
 from lib.linear import FusedLinear
 from lib.utils.unsafe_import import model_from_hf_path
 from model.llama import LlamaForCausalLM, LlamaDecoderLayer
-from lib.utils.model_version import MODEL_VERSION
 
 def check_exist(idx, args):
     """检查量化文件是否已存在"""
@@ -211,7 +203,7 @@ def accumulate(in_q, move_q, ngpus, args, transformer_layer_index):
     del Hs, mus, cts, out
 
 
-def compute_hessian_offline(args):  
+def compute_hessian_offline(calibrate,args):  
     """离线计算 Hessian 矩阵"""
     torch.set_grad_enabled(False)
     print("loading model...")
@@ -231,6 +223,20 @@ def compute_hessian_offline(args):
         print(
             f"loaded cached dataset from {loaded_dev_activations['timestamp']}"
         )
+    elif calibrate is not None and len(calibrate) > 0:
+        # 确保devset是二维tensor [batch_size, seq_len]
+        # 将列表中的张量堆叠成一个张量
+        devset = torch.cat(calibrate, dim=0)
+        # 截断或填充到args.ctx_size长度
+        if devset.size(1) > args.ctx_size:
+            devset = devset[:, :args.ctx_size]
+        elif devset.size(1) < args.ctx_size:
+            # 填充到args.ctx_size长度
+            pad_size = args.ctx_size - devset.size(1)
+            devset = torch.nn.functional.pad(devset, (0, pad_size), value=tokenizer.pad_token_id)
+        dev_emb = model.model.embed_tokens(devset)
+        after_layer = -1
+        print("loaded calibrate data!")
     else:
         print("loading dataset...")
         devset = utils.sample_rp1t(tokenizer,
@@ -464,7 +470,6 @@ def hfize_model(quantized_path,hf_output_path):
 
     tokenizer = AutoTokenizer.from_pretrained(model_config._name_or_path)
 
-    model_config.quip_params['model_version'] = MODEL_VERSION
     model = LlamaForCausalLM.from_pretrained(model_config._name_or_path,
                                              torch_dtype='auto',
                                              low_cpu_mem_usage=True,
@@ -535,6 +540,7 @@ def hfize_model(quantized_path,hf_output_path):
     output_str = tokenizer.decode(token)
     glog.info(output_str)
     glog.info(f'elapsed: {time.time() - start}')
+    return model
 
 
 def quantize_main(args):
@@ -567,8 +573,10 @@ def quantize_main(args):
     tokenizer.pad_token = tokenizer.eos_token
     glog.info('loaded model')
 
+    # 使用默认的数据采样方法
     devset = utils.sample_rp1t(tokenizer, args.devset_size, args.ctx_size,
-                               args.sample_proc)
+                                   args.sample_proc)
+    
     glog.info('loaded dataset and devset')
 
     nproc = torch.cuda.device_count()
@@ -645,10 +653,12 @@ def quantize_main(args):
         p.join()
 
 
-def quip_sharp_main(main_args, hessian_args, quantize_args, finetune_args):
+def quip_sharp_main(calibrate, kwargs):
     """主函数 - 完整的量化微调流程"""
     glog.info("开始完整的 Llama 模型量化微调流程")
-    
+    base_model_config,quant_config = kwargs['base_model'],kwargs['quant']
+    main_args, hessian_args, quantize_args, finetune_args = quant_config['main'], quant_config['hessian'], quant_config['quantize'], quant_config['finetune']
+    main_args['save_path'],main_args['ckpt_path'],main_args['base_model'] = main_args['quantized_path'],main_args['quantized_path'],base_model_config['path']
     # 设置随机种子
     torch.manual_seed(main_args.seed)
     random.seed(main_args.seed)
@@ -660,37 +670,36 @@ def quip_sharp_main(main_args, hessian_args, quantize_args, finetune_args):
     os.makedirs(main_args.quantized_path, exist_ok=True)
     os.makedirs(main_args.ckpt_path, exist_ok=True)
     os.makedirs(main_args.hf_path, exist_ok=True)
-    
-    model = None
 
     # 步骤1: Hessian 计算（如果启用）
     if main_args.enable_hessian:
         glog.info("=== 步骤1: Hessian 计算 ===")
         args = SimpleNamespace(**{**vars(main_args),**vars(hessian_args)})
-        compute_hessian_offline(args)
-    
+        compute_hessian_offline(calibrate,args)
+
     # 步骤2: 量化（如果启用）
     if main_args.enable_quantize:
         glog.info("=== 步骤2: 模型量化 ===")
         args = SimpleNamespace(**{**vars(main_args),**vars(quantize_args)})
         quantize_main(args)
-
+        
     # 步骤3: 端到端微调（如果启用）
     if main_args.enable_finetune:
         glog.info("=== 步骤3: 端到端微调 ===")
         hfize_model(main_args.quantized_path, main_args.hf_path)
         args = SimpleNamespace(**{**vars(main_args),**vars(finetune_args)})
-        finetune_e2e(args)
+        finetune_e2e(args)  
+
     
     # 步骤4: HuggingFace 格式转换（如果启用）
     if main_args.enable_hfize:
         glog.info("=== 步骤4: HuggingFace 格式转换 ===")
-        hfize_model(main_args.ckpt_path, main_args.hf_ft_path)
+        quantmodel = hfize_model(main_args.ckpt_path, main_args.hf_ft_path)
     
     glog.info("完整的量化微调流程完成!")
     
     # 返回最终的模型
-    return model
+    return quantmodel
 
 
 if __name__ == '__main__':

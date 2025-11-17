@@ -6,16 +6,14 @@ base_model:
 
 quant:
   method: quip_sharp
+  quant_seq: true
   skip_layers: [ lm_head ]
   main:
     seed: 0
     num_cpu_threads: 4
-    base_model: /home/xzy/Llama-2-7b-hf
-    save_path: /home/xzy/output/outputs_q
-    hessian_path: /home/xzy/output/hessians/llama2_7b
     quantized_path: /home/xzy/output/outputs_q
+    hessian_path: /home/xzy/output/hessians/llama2_7b
     hf_path: /home/xzy/output/outputs_q_hf
-    ckpt_path: /home/xzy/output/outputs_q
     hf_ft_path: /home/xzy/output/outputs_q_hf_ft_hf
     enable_hessian: true
     enable_quantize: true
@@ -34,7 +32,7 @@ quant:
   quantize:
     batch_size: 16
     devset_size: 384
-    ctx_size: 4096
+    ctx_size: 2048
     sigma_reg: 0.01
     sigma_reg2: 0.01
     incoh_mode: had
@@ -96,7 +94,6 @@ eval:
     num_fewshot: 0
     nsamples: all
     device: cuda
-    seqlen: 2048
     # For 7B / 13B model eval, bs can be set to "1", and inference_per_block can be set to "False".
     # For 70B model eval, bs can be set to "20", and inference_per_block can be set to "True".
     bs: 1

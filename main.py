@@ -10,7 +10,7 @@ from loguru import logger
 from eval.eval_by_category import run_evaluation
 from my_datasets import get_calibrate_loader
 from quantization.layers import LinearQuantHub
-from quantization.llama_seq import llama_sequential
+from quantization.llama_seq import llama_sequential,llama_quipsharp
 from utils.load_model import BaseModel
 
 
@@ -20,13 +20,20 @@ def main(config):
     model = basemodel.build_model()
     new_model = None
     if config.get("quant", False):
-        new_model = basemodel.replace_module(model, exclude_layers=config.quant.skip_layers, include_layers=['.*'])
-        calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
+        calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)    
+        if config.quant.method == "quip_sharp":    
+            model = llama_quipsharp(calibrate,**config)
+            new_model = model
+        else:
+            new_model = basemodel.replace_module(model, exclude_layers=config.quant.skip_layers, include_layers=['.*'])
+            new_model = llama_sequential(model=new_model, calibrate_data=calibrate, **config.quant)
+            logger.info(f'model: {model}')
+            logger.info(f'tokenizer: {tokenizer}')
+    
+    if config.get("method", "") == "qlora":
+        from quantization.qlora.qlora import train
+        train(config)
 
-
-        new_model = llama_sequential(model=new_model, calibrate_data=calibrate, **config.quant)
-        logger.info(f'model: {model}')
-        logger.info(f'tokenizer: {tokenizer}')
 
     if config.get("save", False) and config.get("quant", False):
         model = basemodel.replace_module(new_model, module_type=LinearQuantHub, new_module_type="", display=True)

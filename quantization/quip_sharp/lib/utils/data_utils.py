@@ -1,7 +1,3 @@
-import os
-os.environ['HF_HOME'] = '/home/xzy/huggingface_copy'
-os.environ['HF_DATASETS_CACHE'] = '/home/xzy/huggingface_copy'
-os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 import multiprocessing as mp
 
 import glog
