@@ -7,6 +7,8 @@ from quantization.AWQ.AWQQuantizer import LinearAwqQuantizer
 from quantization.gptq.GPTQQuantizer import LinearGPTQQuantizer
 from quantization.smoothquant.SmoothQuantizer import LinearSmoothQuantizer
 from quantization.rtn.RTNQuantizer import LinearRTNQuantizer
+from quantization.omniquant.generate_act_scale_shift import generate_act_scale_shift
+from quantization.omniquant.OmniQuantizer import omni_quantize
 from quantization.layers import LinearQuantHub
 
 from utils.load_model import find_layers
@@ -134,4 +136,29 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
         clear_mem()
     model.config.use_cache = use_cache
     model = model.to(model_device)
+    return model
+
+
+def llama_omniquant(model_name_or_path, model, calibrate_data, quant_config, logger=None):
+    act_scales, act_shifts = generate_act_scale_shift(
+        model=model,
+        calibrate_data=calibrate_data,
+    )
+    logger.info("act_scales, act_shifts generated")
+    seqlen = quant_config.seqlen
+    weight_config = quant_config.weight
+    nsamples = quant_config.data.nsamples
+    seed = quant_config.data.seed
+    model = omni_quantize(
+        model_name_or_path=model_name_or_path, 
+        model=model, 
+        act_scales=act_scales, 
+        act_shifts=act_shifts, 
+        nsamples=nsamples,
+        seqlen=seqlen,
+        seed=seed,
+        dataloader=calibrate_data,
+        logger=logger,
+        **weight_config
+    )
     return model
