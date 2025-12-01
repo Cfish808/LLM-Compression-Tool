@@ -1,14 +1,15 @@
 import torch
 from torch import nn
-import logging
 from tqdm import tqdm
-import pdb
 
-from transformers.quantizers.quantizer_awq import AwqQuantizer
+# from transformers.quantizers.quantizer_awq import AwqQuantizer
 
 from quantization.AWQ.AWQQuantizer import LinearAwqQuantizer
 from quantization.gptq.GPTQQuantizer import LinearGPTQQuantizer
+from quantization.smoothquant.SmoothQuantizer import LinearSmoothQuantizer
 from quantization.rtn.RTNQuantizer import LinearRTNQuantizer
+from quantization.omniquant.generate_act_scale_shift import generate_act_scale_shift
+from quantization.omniquant.OmniQuantizer import omni_quantize
 from quantization.Quip.QuipQuantizer import LinearQuipQuantizer
 from quantization.quip_sharp.quantize_llama.complete_quantize_finetune_llama import quip_sharp_main
 from quantization.layers import LinearQuantHub
@@ -94,6 +95,8 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                     layer: LinearQuantHub
                     if method == 'gptq':
                         layer.register_quantizer(LinearGPTQQuantizer(layer, device=device, **kwargs["weight"]))
+                    elif method =='smoothquant':
+                        layer.register_quantizer(LinearSmoothQuantizer(layer, device=device, **kwargs["weight"]))
                     elif method == 'awq':
                         layer.register_quantizer(LinearAwqQuantizer(layer,  device=device, **kwargs["weight"]))
                     elif method == 'rtn':
@@ -134,6 +137,32 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
     model.config.use_cache = use_cache
     model = model.to(model_device)
     return model
+
+
+def llama_omniquant(model_name_or_path, model, calibrate_data, quant_config, logger=None):
+    act_scales, act_shifts = generate_act_scale_shift(
+        model=model,
+        calibrate_data=calibrate_data,
+    )
+    logger.info("act_scales, act_shifts generated")
+    seqlen = quant_config.seqlen
+    weight_config = quant_config.weight
+    nsamples = quant_config.data.nsamples
+    seed = quant_config.data.seed
+    model = omni_quantize(
+        model_name_or_path=model_name_or_path, 
+        model=model, 
+        act_scales=act_scales, 
+        act_shifts=act_shifts, 
+        nsamples=nsamples,
+        seqlen=seqlen,
+        seed=seed,
+        dataloader=calibrate_data,
+        logger=logger,
+        **weight_config
+    )
+    return model
+
 
 def llama_quipsharp(calibrate,kwargs):
     return quip_sharp_main(calibrate,kwargs)

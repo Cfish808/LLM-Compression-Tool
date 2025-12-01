@@ -129,10 +129,10 @@ class QuantizedModule(torch.nn.Module):
             return self.core(x)
         return self.default_quantizer(x)
 
-    @torch.no_grad()
-    def quantize(self):
+    # @torch.no_grad()
+    def quantize(self, **kwargs):
         for quantizer in self.quantizer:
-            quantizer.quantize()
+            quantizer.quantize(**kwargs)
 
     def set_default_quantizer(self, idx):
         origin_quantizer = self.default_quantizer
