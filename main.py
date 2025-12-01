@@ -10,8 +10,7 @@ from loguru import logger
 from eval.eval_by_category import run_evaluation
 from my_datasets import get_calibrate_loader,make_data_module
 from quantization.layers import LinearQuantHub
-from quantization.llama_seq import llama_sequential, llama_omniquant,llama_quipsharp
-from utils.load_model import BaseModel
+from quantization.llama_seq import llama_sequential, llama_omniquant, llama_quipsharp
 from utils.load_model import BaseModel, get_accelerate_model
 
 
