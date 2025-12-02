@@ -38,8 +38,8 @@ quant:
 
 eval:
 #    eval_pos: [pretrain, fake_quant]
-#    tasks: [ppl,CommonsenseReasoning]
-#    datasets: [wikitext2,c4]
+    # tasks: [ppl,CommonsenseReasoning]
+    # datasets: [wikitext2,arc_easy]
     tasks: [ppl]
     datasets: [c4]
     download: True

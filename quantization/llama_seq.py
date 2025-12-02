@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from tqdm import tqdm
 
+# from transformers.quantizers.quantizer_awq import AwqQuantizer
 
 from quantization.AWQ.AWQQuantizer import LinearAwqQuantizer
 from quantization.gptq.GPTQQuantizer import LinearGPTQQuantizer
@@ -9,6 +10,8 @@ from quantization.smoothquant.SmoothQuantizer import LinearSmoothQuantizer
 from quantization.rtn.RTNQuantizer import LinearRTNQuantizer
 from quantization.omniquant.generate_act_scale_shift import generate_act_scale_shift
 from quantization.omniquant.OmniQuantizer import omni_quantize
+from quantization.Quip.QuipQuantizer import LinearQuipQuantizer
+from quantization.quip_sharp.quantize_llama.complete_quantize_finetune_llama import quip_sharp_main
 from quantization.layers import LinearQuantHub
 
 from utils.load_model import find_layers
@@ -54,10 +57,6 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
             except ValueError:
                 pass
 
-
-
-
-
         inputs = layers[0].inputs
         attention_mask = layers[0].attention_mask
         position_ids = layers[0].position_ids
@@ -102,7 +101,8 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                         layer.register_quantizer(LinearAwqQuantizer(layer,  device=device, **kwargs["weight"]))
                     elif method == 'rtn':
                         layer.register_quantizer(LinearRTNQuantizer(layer,  device=device, **kwargs["weight"]))
-                    
+                    elif method == 'quip':
+                        layer.register_quantizer(LinearQuipQuantizer(layer,  device=device, **kwargs["weight"]))
                     else:
                         raise RuntimeError(f'No {method} Quantizer!')
                     layer.prepare_hook()
@@ -162,3 +162,8 @@ def llama_omniquant(model_name_or_path, model, calibrate_data, quant_config, log
         **weight_config
     )
     return model
+
+
+def llama_quipsharp(calibrate,kwargs):
+    return quip_sharp_main(calibrate,kwargs)
+

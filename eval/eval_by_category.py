@@ -136,6 +136,7 @@ def run_evaluation(
                 if "wikitext2" in datasets:
                     test_task_name.append("wikitext2")
                     eval_wiki2_ppl(model, tokenizer, **kwargs)
+
                 if "ptb" in datasets:
                     test_task_name.append("ptb")
                     eval_ptb_ppl(model, tokenizer, **kwargs)

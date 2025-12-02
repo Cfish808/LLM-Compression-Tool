@@ -8,10 +8,10 @@ from easydict import EasyDict
 from loguru import logger
 
 from eval.eval_by_category import run_evaluation
-from my_datasets import get_calibrate_loader
+from my_datasets import get_calibrate_loader,make_data_module
 from quantization.layers import LinearQuantHub
-from quantization.llama_seq import llama_sequential, llama_omniquant
-from utils.load_model import BaseModel
+from quantization.llama_seq import llama_sequential, llama_omniquant, llama_quipsharp
+from utils.load_model import BaseModel, get_accelerate_model
 
 
 def main(config):
@@ -24,11 +24,20 @@ def main(config):
         if config.quant.method == "omniquant":
             model = llama_omniquant(config.base_model.path, model, calibrate, config.quant, logger=logger)
             new_model = model
+        elif config.quant.method == "quip_sharp":
+            model = llama_quipsharp(calibrate,**config)
+            new_model = model
+        elif config.quant.method == "qlora":
+            from quantization.qlora.qlora import train
+            model,tokenizer = get_accelerate_model(config.base_model)
+            calibrate = make_data_module(tokenizer=tokenizer, args=config.quant.data)
+            model = train(model=model,tokenizer=tokenizer,calibrate_data=calibrate, args=config.quant.args)
+            new_model = model
         else:
             new_model = basemodel.replace_module(model, exclude_layers=config.quant.skip_layers, include_layers=['.*'])
             new_model = llama_sequential(model=new_model, calibrate_data=calibrate, **config.quant)
-        logger.info(f'model: {model}')
-        logger.info(f'tokenizer: {tokenizer}')
+            logger.info(f'model: {model}')
+            logger.info(f'tokenizer: {tokenizer}')
 
     if config.get("save", False) and config.get("quant", False):
         model = basemodel.replace_module(new_model, module_type=LinearQuantHub, new_module_type="", display=True)
