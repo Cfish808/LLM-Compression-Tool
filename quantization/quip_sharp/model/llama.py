@@ -56,8 +56,8 @@ if is_flash_attn_2_available():
     from flash_attn.bert_padding import index_first_axis, pad_input, unpad_input  # noqa
 
 
-from lib.linear.fused_quantized_linear import FusedQuantizedLinear
-from lib.linear.quantized_linear import QuantizedLinear
+from quantization.quip_sharp.lib.linear.fused_quantized_linear import FusedQuantizedLinear
+from quantization.quip_sharp.lib.linear.quantized_linear import QuantizedLinear
 
     
 logger = logging.get_logger(__name__)

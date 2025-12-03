@@ -33,11 +33,11 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer,
 from transformers.modeling_attn_mask_utils import \
     _prepare_4d_causal_attention_mask
 
-from lib import codebook, utils
-from lib.algo import finetune, quip
-from lib.linear import FusedLinear
-from lib.utils.unsafe_import import model_from_hf_path
-from model.llama import LlamaForCausalLM, LlamaDecoderLayer
+from quantization.quip_sharp.lib import codebook, utils
+from quantization.quip_sharp.lib.algo import finetune, quip
+from quantization.quip_sharp.lib.linear import FusedLinear
+from quantization.quip_sharp.lib.utils.unsafe_import import model_from_hf_path
+from quantization.quip_sharp.model.llama import LlamaForCausalLM, LlamaDecoderLayer
 
 def check_exist(idx, args):
     """检查量化文件是否已存在"""

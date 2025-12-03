@@ -25,7 +25,7 @@ def main(config):
             model = llama_omniquant(config.base_model.path, model, calibrate, config.quant, logger=logger)
             new_model = model
         elif config.quant.method == "quip_sharp":
-            model = llama_quipsharp(calibrate,**config)
+            model = llama_quipsharp(calibrate,config)
             new_model = model
         elif config.quant.method == "qlora":
             from quantization.qlora.qlora import train

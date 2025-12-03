@@ -1,11 +1,8 @@
-import time
-
-import quiptools_cuda
 import torch
 import torch.nn as nn
 
-from lib import codebook
-from lib.utils import clean, dtype_from_str, get_hadK
+from quantization.quip_sharp.lib import codebook
+from quantization.quip_sharp.lib.utils import clean, dtype_from_str, get_hadK
 
 
 class QuantizedLinear(nn.Module):
