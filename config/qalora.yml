@@ -2,30 +2,27 @@
 # This file contains all the parameters used in the QLoRA training script
 base_model:
   type: Llama
-  path: /home/xzy/Llama-2-7b-hf
+  path: /home/xzy/models/Llama-2-7B-GPTQ
+  use_auth_token: false  # Will use the token generated when running `transformers-cli login`
+  output_dir: "./output"  # The output directory where the model predictions and checkpoints will be written
   torch_dtype: auto
   tokenizer_mode: fast
-  use_auth_token: false  # Will use the token generated when running `transformers-cli login`
+  fp16: false
+  bf16: false
   trust_remote_code: false  # Enable unpickling of arbitrary code in AutoModelForCausalLM.from_pretrained
-  output_dir: "./output"  # The output directory where the model predictions and checkpoints will be written
   cache_dir: null  # Where to store the pre-trained models downloaded from s3
-  bf16: false  # Whether to use bf16 16-bit (mixed) precision training instead of 32-bit training
-  fp16: false  # Whether to use fp16 16-bit (mixed) precision training instead of 32-bit training
-  gradient_checkpointing: true  # If True, use gradient checkpointing to save memory at the expense of slower backward pass
   full_finetune: false  # Whether to full finetune or do LoRA finetuning
   lora_r: 64  # Lora attention dimension
   lora_alpha: 16  # Lora alpha
-  lora_dropout: 0.0  # Lora dropout
-  bits: 4  # How many bits to use for quantization
-  double_quant: True  # Whether to use double quantization
-  quant_type: "nf4"  # Quantization data type to use. Should be one of `fp4` or `nf4`
-  max_memory_MB: 80000  # Memory limit for each GPU
+  lora_dropout: 0.0
+  max_memory_MB: 80000
+  gradient_checkpointing: true  # If True, use gradient checkpointing to save memory at the expense of slower backward pass
 
 quant:
-  method: "qlora"
+  method: "qalora"
   # Data Arguments
   data:
-    dataset: wikitext2
+    dataset: alpaca
     nsamples: 128
     seqlen: 2048
     download: True
@@ -36,18 +33,18 @@ quant:
     max_eval_samples: 1000  # For debugging purposes or quicker training, truncate the number of evaluation examples to this value if set.
     source_max_len: 1024  # Maximum length of the source input sequence
     target_max_len: 256  # Maximum length of the target output sequence
-    eval_dataset_size: 1024  #
+    eval_dataset_size: 1024  
     dataset_format: null
     predict_with_generate: false
+    bf16: true  # Whether to use bf16 (mixed precision) training
     do_train: true  # Whether to run training
     do_eval: true  # Whether to run eval on the dev set
     do_predict: true  # Whether to run predictions on the test set
     group_by_length: true  # Whether to group samples of similar length together for efficiency
     train_on_source: false  # Whether to train on the source text as well as the target text
 
-
   args:
-    run_name: null  # An optional descriptor for the run
+    run_name: "qalora-run"  # An optional descriptor for the run
     mmlu_source_max_len: 2048  # Maximum length of the MMLU source input sequence
     max_mmlu_samples: null  # For debugging purposes or quicker training, truncate the number of MMLU evaluation examples to this value if set.
     mmlu_split: "eval"  # MMLU split to use (validation, test)
@@ -64,7 +61,7 @@ quant:
       learning_rate: 0.0002  # The initial learning rate for AdamW optimizer
       weight_decay: 0.0  # The weight decay to apply (if not zero)
       max_grad_norm: 0.3  # Maximum gradient norm (for gradient clipping)
-      max_steps: 1000  # If > 0: set total number of training steps to perform
+      max_steps: 10000  # If > 0: set total number of training steps to perform
       lr_scheduler_type: "constant"  # The lr scheduler type to use
       warmup_ratio: 0.03  # Ratio of steps for the linear warmup (from 0 to learning_rate)
       logging_steps: 1  # Log every X updates steps
@@ -73,11 +70,8 @@ quant:
       save_total_limit: 3  # Limit the total amount of checkpoints
       bf16: false  # Whether to use bf16 16-bit (mixed) precision training instead of 32-bit training
       fp16: false  # Whether to use fp16 16-bit (mixed) precision training instead of 32-bit training
-      local_rank: -1  # For distributed training: local_rank
-      debug: []  # Whether or not to enable debug mode
       remove_unused_columns: false  # Remove columns not required by the model when using an nlp.Dataset
-      report_to: []  # Disable external reporters (e.g., wandb, tensorboard)
-      gradient_checkpointing: true  # If True, use gradient checkpointing to save memory at the expense of slower backward pass
+      report_to: "none"  # Disable external reporters (e.g., wandb, tensorboard)
       optim: "paged_adamw_32bit"  # The optimizer to use
       output_dir: "./output"  # The output directory where the model predictions and checkpoints will be written
       # Generation Arguments
@@ -97,5 +91,6 @@ quant:
         repetition_penalty: 1.0
         length_penalty: 1.0
         no_repeat_ngram_size: 1.0
+        temperature: 1.0
 
-save: /home/xzy/output/llama2_7b_lora
+save: /home/xzy/output/Llama-2-7B-GPTQ_qalora

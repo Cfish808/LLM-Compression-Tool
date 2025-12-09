@@ -17,7 +17,7 @@ if torch.cuda.is_available():
     torch.backends.cuda.matmul.allow_tf32 = True
 
 logger = logging.getLogger(__name__)
-
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 class SavePeftModelCallback(transformers.TrainerCallback):
     def save_model(self, args, state, kwargs):

@@ -19,7 +19,7 @@ import torch
 import transformers
 from torch import nn
 from tqdm import tqdm
-from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer,BitsAndBytesConfig,LlamaTokenizer
+from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer,BitsAndBytesConfig,LlamaTokenizer,LlamaTokenizerFast
 from transformers.modeling_utils import no_init_weights
 from transformers.utils import ContextManagers, cached_file
 
@@ -35,7 +35,9 @@ from peft import (
     get_peft_model,
     PeftModel
 )
-import bitsandbytes as bnb
+
+
+
 import importlib
 def get_checkpoints(model_name_or_path: str, extensions: List[str], possible_model_basenames: List[str], **cached_file_kwargs):
     """
@@ -253,6 +255,7 @@ def smart_tokenizer_and_embedding_resize(
         output_embeddings_data[-num_new_tokens:] = output_embeddings_avg
 
 def find_all_linear_names(args, model):
+    import bitsandbytes as bnb
     cls = bnb.nn.Linear4bit if args.bits == 4 else (bnb.nn.Linear8bitLt if args.bits == 8 else torch.nn.Linear)
     lora_module_names = set()
     for name, module in model.named_modules():
@@ -287,7 +290,43 @@ def is_ipex_available():
         return False
     return True
 
-def get_accelerate_model(args):
+def prepare_model_for_int8_training(model, use_gradient_checkpointing=True):
+    r"""
+    This method wraps the entire protocol for preparing a model before running a training. This includes:
+        1- Cast the layernorm in fp32 2- making output embedding layer require grads 3- Add the upcasting of the lm
+        head to fp32
+
+    Args:
+        model, (`transformers.PreTrainedModel`):
+            The loaded model from `transformers`
+    """
+    for name, param in model.named_parameters():
+        # freeze base model's layers
+        param.requires_grad = False
+        
+    if use_gradient_checkpointing:
+        # For backward compatibility
+        if hasattr(model, "enable_input_require_grads"):
+            model.enable_input_require_grads()
+        else:
+
+            def make_inputs_require_grad(module, input, output):
+                output.requires_grad_(True)
+
+            model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
+
+        # enable gradient checkpointing for memory efficiency
+        model.gradient_checkpointing_enable()
+
+    model.lm_head = model.lm_head.float()
+    for _, param in model.named_parameters():
+        if param.dtype == torch.float16:
+            param = param.float()
+
+    return model
+
+def get_accelerate_model(args,method=''):
+    args.model_name_or_path = args.path
     checkpoint_dir = get_last_checkpoint(args.output_dir)
     if torch.cuda.is_available():
         n_gpus = torch.cuda.device_count()
@@ -308,14 +347,15 @@ def get_accelerate_model(args):
     if args.full_finetune: assert args.bits in [16, 32]
 
     print(f'loading base model {args.model_name_or_path}...')
-    compute_dtype = (torch.float16 if args.fp16 else (torch.bfloat16 if args.bf16 else torch.float32))
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model_name_or_path,
-        cache_dir=args.cache_dir,
-        load_in_4bit=args.bits == 4,
-        load_in_8bit=args.bits == 8,
-        device_map=device_map,
-        max_memory=max_memory,
+    if method == 'qlora':
+        compute_dtype = (torch.float16 if args.fp16 else (torch.bfloat16 if args.bf16 else torch.float32))
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model_name_or_path,
+            cache_dir=args.cache_dir,
+            load_in_4bit=args.bits == 4,
+            load_in_8bit=args.bits == 8,
+            device_map=device_map,
+            max_memory=max_memory,
         quantization_config=BitsAndBytesConfig(
             load_in_4bit=args.bits == 4,
             load_in_8bit=args.bits == 8,
@@ -327,17 +367,37 @@ def get_accelerate_model(args):
         ),
         torch_dtype=(torch.float32 if args.fp16 else (torch.bfloat16 if args.bf16 else torch.float32)),
         trust_remote_code=args.trust_remote_code,
-        use_auth_token=args.use_auth_token
-    )
-    if compute_dtype == torch.float16 and args.bits == 4:
-        if torch.cuda.is_bf16_supported():
-            print('='*80)
-            print('Your GPU supports bfloat16, you can accelerate training with the argument --bf16')
-            print('='*80)
+        use_auth_token=args.use_auth_token)
+
+        if compute_dtype == torch.float16 and args.bits == 4:
+            if torch.cuda.is_bf16_supported():
+                print('='*80)
+                print('Your GPU supports bfloat16, you can accelerate training with the argument --bf16')
+                print('='*80)
             
-    if compute_dtype == torch.float16 and (is_ipex_available() and torch.xpu.is_available()):
-        compute_dtype = torch.bfloat16
-        print('Intel XPU does not support float16 yet, so switching to bfloat16')
+        if compute_dtype == torch.float16 and (is_ipex_available() and torch.xpu.is_available()):
+            compute_dtype = torch.bfloat16
+            print('Intel XPU does not support float16 yet, so switching to bfloat16')
+    
+    elif method == "qalora":
+        from auto_gptq import AutoGPTQForCausalLM
+        model = AutoGPTQForCausalLM.from_quantized(
+            args.model_name_or_path,
+            device_map='balanced',
+            max_memory=max_memory,
+            trust_remote_code=args.trust_remote_code,
+            inject_fused_attention = False,
+            inject_fused_mlp = False,
+            use_triton=False,
+            warmup_triton=False,
+            trainable=True,
+            model_basename="model",
+            use_safetensors=True
+        )
+        model.model.quantize_config = model.quantize_config
+        model.train()
+    else:
+        raise ValueError(f"Unknown method {method}")
 
     setattr(model, 'model_parallel', True)
     setattr(model, 'is_parallelizable', True)
@@ -349,19 +409,23 @@ def get_accelerate_model(args):
         args.model_name_or_path,
         cache_dir=args.cache_dir,
         padding_side="right",
-        use_fast=False, # Fast tokenizer giving issues.
+        use_fast=True if method == "qalora" else False, 
         tokenizer_type='llama' if 'llama' in args.model_name_or_path else None, # Needed for HF name change
         trust_remote_code=args.trust_remote_code,
         use_auth_token=args.use_auth_token,
     )
+
+
     DEFAULT_PAD_TOKEN = "[PAD]"
-    if tokenizer._pad_token is None:
+
+    if tokenizer.pad_token is None:
         smart_tokenizer_and_embedding_resize(
             special_tokens_dict=dict(pad_token=DEFAULT_PAD_TOKEN),
             tokenizer=tokenizer,
             model=model,
         )
-    if 'llama' in args.model_name_or_path or isinstance(tokenizer, LlamaTokenizer):
+
+    if 'llama' in args.model_name_or_path or isinstance(tokenizer, LlamaTokenizer) or isinstance(tokenizer, LlamaTokenizerFast):
         # LLaMA tokenizer may not have correct special tokens set.
         # Check and add them if missing to prevent them from being parsed into different tokens.
         # Note that these are present in the vocabulary.
@@ -370,13 +434,19 @@ def get_accelerate_model(args):
         tokenizer.add_special_tokens({
                 "eos_token": tokenizer.convert_ids_to_tokens(model.config.eos_token_id),
                 "bos_token": tokenizer.convert_ids_to_tokens(model.config.bos_token_id),
-                "unk_token": tokenizer.convert_ids_to_tokens(
-                    model.config.pad_token_id if model.config.pad_token_id != -1 else tokenizer.pad_token_id
-                ),
+                # "unk_token": tokenizer.convert_ids_to_tokens(model.config.pad_token_id if model.config.pad_token_id != -1 else tokenizer.pad_token_id),
+                "unk_token": tokenizer.convert_ids_to_tokens(model.config.pad_token_id),
         })
     
     if not args.full_finetune:
-        model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=args.gradient_checkpointing)
+        if method == "qlora":
+            model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=args.gradient_checkpointing)
+        elif method == "qalora":
+            model = prepare_model_for_int8_training(model, use_gradient_checkpointing=args.gradient_checkpointing)
+            if args.gradient_checkpointing:
+                model.gradient_checkpointing_enable()
+        else:
+            raise ValueError(f"Unknown method {method}")
 
     if not args.full_finetune:
         if checkpoint_dir is not None:
@@ -384,17 +454,40 @@ def get_accelerate_model(args):
             model = PeftModel.from_pretrained(model, join(checkpoint_dir, 'adapter_model'), is_trainable=True)
         else:
             print(f'adding LoRA modules...')
-            modules = find_all_linear_names(args, model)
-            config = LoraConfig(
-                r=args.lora_r,
-                lora_alpha=args.lora_alpha,
-                target_modules=modules,
-                lora_dropout=args.lora_dropout,
-                bias="none",
-                task_type="CAUSAL_LM",
-            )
-            model = get_peft_model(model, config)
+            if method == "qlora":
+                modules = find_all_linear_names(args, model)
+                config = LoraConfig(
+                    r=args.lora_r,
+                    lora_alpha=args.lora_alpha,
+                    target_modules=modules,
+                    lora_dropout=args.lora_dropout,
+                    bias="none",
+                    task_type="CAUSAL_LM",
+                )
+                model = get_peft_model(model, config)
+            elif method == "qalora":
+                from auto_gptq.utils.peft_utils import get_gptq_peft_model, GPTQLoraConfig
+                config = GPTQLoraConfig(
+                    r=args.lora_r,
+                    lora_alpha=args.lora_alpha,
+                    #target_modules=modules,
+                    lora_dropout=args.lora_dropout,
+                    bias="none",
+                    task_type="CAUSAL_LM",
+                )
+                model = get_gptq_peft_model(model, config, auto_find_all_linears=True, train_mode=True)
+            else:
+                raise ValueError(f"Unknown method {method}")
 
+    if method == "qalora" and args.gradient_checkpointing:
+        if hasattr(model, "enable_input_require_grads"):
+            model.enable_input_require_grads()
+        else:
+            def make_inputs_require_grad(module, input, output):
+                output.requires_grad_(True)
+            model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
+
+    
     for name, module in model.named_modules():
         if isinstance(module, LoraLayer):
             if args.bf16:

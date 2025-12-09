@@ -11,7 +11,6 @@ from quantization.rtn.RTNQuantizer import LinearRTNQuantizer
 from quantization.omniquant.generate_act_scale_shift import generate_act_scale_shift
 from quantization.omniquant.OmniQuantizer import omni_quantize
 from quantization.Quip.QuipQuantizer import LinearQuipQuantizer
-from quantization.quip_sharp.quantize_llama.complete_quantize_finetune_llama import quip_sharp_main
 from quantization.layers import LinearQuantHub
 
 from utils.load_model import find_layers
@@ -115,8 +114,8 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                     layer.remove_hook()
                     layer.quantize()
                     layer.set_default_quantizer(0)
-                    # del layer.core.weight
-                    layer.core.weight.data = layer.quantizer[0].fake_w
+                    del layer.core.weight
+                    # layer.core.weight.data = layer.quantizer[0].fake_w
                     layer.to(offload)
                     clear_mem()
                 del subset
@@ -165,5 +164,6 @@ def llama_omniquant(model_name_or_path, model, calibrate_data, quant_config, log
 
 
 def llama_quipsharp(calibrate,kwargs):
+    from quantization.quip_sharp.quantize_llama.complete_quantize_finetune_llama import quip_sharp_main
     return quip_sharp_main(calibrate,kwargs)
 
