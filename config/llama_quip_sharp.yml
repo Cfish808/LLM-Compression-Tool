@@ -21,8 +21,8 @@ quant:
     enable_hfize: true
   hessian:
     batch_size: 4
-    devset_size: 6144
-    ctx_size: 2048
+    # devset_size: 6144
+    # ctx_size: 4096
     scratch_path: null
     chunk_size: 256
     async_copy_speed: -1
@@ -31,8 +31,8 @@ quant:
     sample_proc: 1
   quantize:
     batch_size: 16
-    devset_size: 384
-    ctx_size: 2048
+    # devset_size: 384
+    # ctx_size: 2048
     sigma_reg: 0.01
     sigma_reg2: 0.01
     incoh_mode: had
@@ -59,8 +59,8 @@ quant:
     ft_grad_ckpt: false
   finetune:
     batch_size: 16
-    devset_size: 384
-    ctx_size: 4096
+    # devset_size: 384
+    # ctx_size: 4096
     sample_proc: 1
     ft_lr: 0.00001
     ft_susv_lr: 0.0001

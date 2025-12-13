@@ -20,7 +20,7 @@ def main(config):
     model = basemodel.build_model()
     new_model = None
     if config.get("quant", False):
-        if config.quant.method in ["qlora", "qalora"]:
+        if config.quant.method in ["qlora", "qalora","irlora"]:
             calibrate = make_data_module(tokenizer=tokenizer, args=config.quant.data)
         else:
             calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
@@ -31,7 +31,7 @@ def main(config):
             from quantization.llama_seq import llama_quipsharp
             model = llama_quipsharp(calibrate,config)
             new_model = model
-        elif config.quant.method in ["qlora", "qalora"]:
+        elif config.quant.method in ["qlora", "qalora","irlora"]:
             from quantization.qlora.qlora import train
             model,tokenizer = get_accelerate_model(config.base_model,config.quant.method)
             model = train(model=model,tokenizer=tokenizer,calibrate_data=calibrate, args=config.quant.args)

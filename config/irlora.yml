@@ -2,7 +2,7 @@
 # This file contains all the parameters used in the QLoRA training script
 base_model:
   type: Llama
-  path: /home/xzy/models/Llama-2-7B-GPTQ
+  path: /home/xzy/Llama-2-7b-hf
   use_auth_token: false  # Will use the token generated when running `transformers-cli login`
   output_dir: "./output"  # The output directory where the model predictions and checkpoints will be written
   torch_dtype: auto
@@ -15,10 +15,16 @@ base_model:
   lora_alpha: 16  # Lora alpha
   lora_dropout: 0.0
   max_memory_MB: 80000
+  bits: 4  # How many bits to use for quantization
+  double_quant: True  # Whether to use double quantization
   gradient_checkpointing: true  # If True, use gradient checkpointing to save memory at the expense of slower backward pass
+  quant_type: "nf4"  # Quantization data type to use. Should be one of `fp4` or `nf4`
+  tau_lambda: 0.1
+  tau_n: 1
+  blocksize2: 256
 
 quant:
-  method: "qalora"
+  method: "irlora"
   # Data Arguments
   data:
     dataset: alpaca

@@ -343,11 +343,8 @@ def get_accelerate_model(args,method=''):
         device_map = {'': local_rank}
         max_memory = {'': max_memory[local_rank]}
 
-
-    if args.full_finetune: assert args.bits in [16, 32]
-
     print(f'loading base model {args.model_name_or_path}...')
-    if method == 'qlora':
+    if method in ['qlora','irlora']:
         compute_dtype = (torch.float16 if args.fp16 else (torch.bfloat16 if args.bf16 else torch.float32))
         model = AutoModelForCausalLM.from_pretrained(
             args.model_name_or_path,
@@ -438,46 +435,62 @@ def get_accelerate_model(args,method=''):
                 "unk_token": tokenizer.convert_ids_to_tokens(model.config.pad_token_id),
         })
     
-    if not args.full_finetune:
+    if method in ["qlora","irlora"]:
+        model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=args.gradient_checkpointing)
+    elif method == "qalora":
+        model = prepare_model_for_int8_training(model, use_gradient_checkpointing=args.gradient_checkpointing)
+        if args.gradient_checkpointing:
+            model.gradient_checkpointing_enable()
+    else:
+        raise ValueError(f"Unknown method {method}")
+
+
+    if checkpoint_dir is not None:
+        print("Loading adapters from checkpoint.")
+        model = PeftModel.from_pretrained(model, join(checkpoint_dir, 'adapter_model'), is_trainable=True)
+    else:
+        print(f'adding LoRA modules...')
         if method == "qlora":
-            model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=args.gradient_checkpointing)
+            modules = find_all_linear_names(args, model)
+            config = LoraConfig(
+                r=args.lora_r,
+                lora_alpha=args.lora_alpha,
+                target_modules=modules,
+                lora_dropout=args.lora_dropout,
+                bias="none",
+                task_type="CAUSAL_LM",
+            )
+            model = get_peft_model(model, config)
         elif method == "qalora":
-            model = prepare_model_for_int8_training(model, use_gradient_checkpointing=args.gradient_checkpointing)
-            if args.gradient_checkpointing:
-                model.gradient_checkpointing_enable()
+            from auto_gptq.utils.peft_utils import get_gptq_peft_model, GPTQLoraConfig
+            config = GPTQLoraConfig(
+                r=args.lora_r,
+                lora_alpha=args.lora_alpha,
+                #target_modules=modules,
+                lora_dropout=args.lora_dropout,
+                bias="none",
+                task_type="CAUSAL_LM",
+            )
+            model = get_gptq_peft_model(model, config, auto_find_all_linears=True, train_mode=True)
+        elif method == "irlora":
+            modules = find_all_linear_names(args, model)
+            config = LoraConfig(
+                r=args.lora_r,
+                lora_alpha=args.lora_alpha,
+                target_modules=modules,
+                lora_dropout=args.lora_dropout,
+                bias="none",
+                task_type="CAUSAL_LM",
+            )
+            model = get_peft_model(model, config)
+            from utils.irlora_utils import get_my_model
+            model_fp = AutoModelForCausalLM.from_pretrained(
+            args.model_name_or_path,
+            torch_dtype=(torch.float32 if args.fp16 else (torch.bfloat16 if args.bf16 else torch.float32)),
+            trust_remote_code=args.trust_remote_code)
+            model = get_my_model(model, model_fp, args.blocksize2, args.tau_lambda, args.tau_n)
         else:
             raise ValueError(f"Unknown method {method}")
-
-    if not args.full_finetune:
-        if checkpoint_dir is not None:
-            print("Loading adapters from checkpoint.")
-            model = PeftModel.from_pretrained(model, join(checkpoint_dir, 'adapter_model'), is_trainable=True)
-        else:
-            print(f'adding LoRA modules...')
-            if method == "qlora":
-                modules = find_all_linear_names(args, model)
-                config = LoraConfig(
-                    r=args.lora_r,
-                    lora_alpha=args.lora_alpha,
-                    target_modules=modules,
-                    lora_dropout=args.lora_dropout,
-                    bias="none",
-                    task_type="CAUSAL_LM",
-                )
-                model = get_peft_model(model, config)
-            elif method == "qalora":
-                from auto_gptq.utils.peft_utils import get_gptq_peft_model, GPTQLoraConfig
-                config = GPTQLoraConfig(
-                    r=args.lora_r,
-                    lora_alpha=args.lora_alpha,
-                    #target_modules=modules,
-                    lora_dropout=args.lora_dropout,
-                    bias="none",
-                    task_type="CAUSAL_LM",
-                )
-                model = get_gptq_peft_model(model, config, auto_find_all_linears=True, train_mode=True)
-            else:
-                raise ValueError(f"Unknown method {method}")
 
     if method == "qalora" and args.gradient_checkpointing:
         if hasattr(model, "enable_input_require_grads"):
