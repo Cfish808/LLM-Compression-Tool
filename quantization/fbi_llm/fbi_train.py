@@ -126,16 +126,16 @@ def train_fbi(teacher,calibrate,config):
     fbi_args = quant_config['fbi_args']
 
     n_nodes = fbi_args['n_nodes']
-    n_devices_per_node = fbi_args['n_devices_per_node']
-    per_device_batch_size = fbi_args['per_device_batch_size']
-    accumulate_grad_batches = fbi_args['accumulate_grad_batches']
+    n_devices_per_node = fbi_args['nproc_per_node']
+    per_device_batch_size = fbi_args['per_device_train_batch_size']
+    accumulate_grad_batches = fbi_args['gradient_accumulation_steps']
     use_kd = fbi_args['use_kd']
     config_path = fbi_args['config_path']
 
     LEARNING_RATE = float(fbi_args['learning_rate'])
     END_LEARNING_RATE = float(fbi_args['end_learning_rate'])
-    WARMUP_GRAD_STEPS = int(fbi_args['warmup_grad_steps'])
-    GRAD_NORM_CLIP = float(fbi_args['grad_norm_clip'])
+    WARMUP_GRAD_STEPS = int(fbi_args['warmup_steps'])
+    GRAD_NORM_CLIP = float(fbi_args['max_grad_norm'])
     WEIGHT_DECAY = float(fbi_args['weight_decay'])
     BETA1 = float(fbi_args['beta1'])
     BETA2 = float(fbi_args['beta2'])
