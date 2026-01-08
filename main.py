@@ -31,6 +31,10 @@ def main(config):
             from quantization.llama_seq import llama_quipsharp
             model = llama_quipsharp(calibrate,config)
             new_model = model
+        elif config.quant.method == "fbi_llm":
+            from quantization.fbi_llm.fbi_train import train_fbi
+            model = train_fbi(model, calibrate, config)
+            new_model = model
         elif config.quant.method in ["qlora", "qalora","irlora"]:
             from quantization.qlora.qlora import train
             model,tokenizer = get_accelerate_model(config.base_model,config.quant.method)
