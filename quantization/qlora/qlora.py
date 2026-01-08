@@ -17,7 +17,7 @@ if torch.cuda.is_available():
     torch.backends.cuda.matmul.allow_tf32 = True
 
 logger = logging.getLogger(__name__)
-
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 class SavePeftModelCallback(transformers.TrainerCallback):
     def save_model(self, args, state, kwargs):
@@ -52,13 +52,12 @@ class SavePeftModelCallback(transformers.TrainerCallback):
 def train(model,tokenizer, calibrate_data, args):
     model.config.use_cache = False
     print('loaded model')
-    set_seed(args.seed)
 
     training_args_dict = args.training_args.to_dict() if hasattr(args.training_args, 'to_dict') else dict(args.training_args)
-    gen_args = training_args_dict.pop('generation_args', None)
+    generation_args_dict = args.generation_args.to_dict() if hasattr(args.generation_args, 'to_dict') else dict(args.generation_args)
     training_args = Seq2SeqTrainingArguments(**training_args_dict)
-    if gen_args is not None:
-        training_args.generation_config = GenerationConfig(**gen_args)
+    if generation_args_dict is not None:
+        training_args.generation_config = GenerationConfig(**generation_args_dict)
 
     transformers.logging.set_verbosity_info()
     
@@ -69,19 +68,18 @@ def train(model,tokenizer, calibrate_data, args):
         **{k:v for k,v in calibrate_data.items() if k != 'predict_dataset'},
     )
 
-    if not args.full_finetune:
-        trainer.add_callback(SavePeftModelCallback)
 
-    all_metrics = {"run_name": args.run_name}
+    trainer.add_callback(SavePeftModelCallback)
 
-    if args.do_train:
-        logger.info("*** Train ***")
-        train_result = trainer.train()
-        metrics = train_result.metrics
-        trainer.log_metrics("train", metrics)
-        trainer.save_metrics("train", metrics)
-        trainer.save_state()
-        all_metrics.update(metrics)
+    all_metrics = {"run_name": "train"}
+
+    logger.info("*** Train ***")
+    train_result = trainer.train()
+    metrics = train_result.metrics
+    trainer.log_metrics("train", metrics)
+    trainer.save_metrics("train", metrics)
+    trainer.save_state()
+    all_metrics.update(metrics)
     return model
 
 if __name__ == "__main__":

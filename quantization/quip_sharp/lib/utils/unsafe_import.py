@@ -1,11 +1,7 @@
 # functions in this file cause circular imports so they cannot be loaded into __init__
-
-import json
-import os
-
 import transformers
 
-from model.llama import LlamaForCausalLM
+from quantization.quip_sharp.model.llama import LlamaForCausalLM
 
 from . import graph_wrapper
 

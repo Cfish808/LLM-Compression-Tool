@@ -10,7 +10,7 @@ from loguru import logger
 from eval.eval_by_category import run_evaluation
 from my_datasets import get_calibrate_loader,make_data_module
 from quantization.layers import LinearQuantHub
-from quantization.llama_seq import llama_sequential, llama_omniquant, llama_quipsharp
+from quantization.llama_seq import llama_sequential, llama_omniquant
 from utils.load_model import BaseModel, get_accelerate_model
 
 
@@ -20,17 +20,24 @@ def main(config):
     model = basemodel.build_model()
     new_model = None
     if config.get("quant", False):
-        calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
+        if config.quant.method in ["qlora", "qalora","irlora"]:
+            calibrate = make_data_module(tokenizer=tokenizer, args=config.quant.data)
+        else:
+            calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
         if config.quant.method == "omniquant":
             model = llama_omniquant(config.base_model.path, model, calibrate, config.quant, logger=logger)
             new_model = model
         elif config.quant.method == "quip_sharp":
-            model = llama_quipsharp(calibrate,**config)
+            from quantization.llama_seq import llama_quipsharp
+            model = llama_quipsharp(calibrate,config)
             new_model = model
-        elif config.quant.method == "qlora":
+        elif config.quant.method == "fbi_llm":
+            from quantization.fbi_llm.fbi_train import train_fbi
+            model = train_fbi(model, calibrate, config)
+            new_model = model
+        elif config.quant.method in ["qlora", "qalora","irlora"]:
             from quantization.qlora.qlora import train
-            model,tokenizer = get_accelerate_model(config.base_model)
-            calibrate = make_data_module(tokenizer=tokenizer, args=config.quant.data)
+            model,tokenizer = get_accelerate_model(config.base_model,config.quant.method)
             model = train(model=model,tokenizer=tokenizer,calibrate_data=calibrate, args=config.quant.args)
             new_model = model
         else:

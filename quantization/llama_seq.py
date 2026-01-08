@@ -11,7 +11,6 @@ from quantization.rtn.RTNQuantizer import LinearRTNQuantizer
 from quantization.omniquant.generate_act_scale_shift import generate_act_scale_shift
 from quantization.omniquant.OmniQuantizer import omni_quantize
 from quantization.Quip.QuipQuantizer import LinearQuipQuantizer
-from quantization.quip_sharp.quantize_llama.complete_quantize_finetune_llama import quip_sharp_main
 from quantization.layers import LinearQuantHub
 
 from utils.load_model import find_layers
@@ -165,5 +164,6 @@ def llama_omniquant(model_name_or_path, model, calibrate_data, quant_config, log
 
 
 def llama_quipsharp(calibrate,kwargs):
+    from quantization.quip_sharp.quantize_llama.complete_quantize_finetune_llama import quip_sharp_main
     return quip_sharp_main(calibrate,kwargs)
 

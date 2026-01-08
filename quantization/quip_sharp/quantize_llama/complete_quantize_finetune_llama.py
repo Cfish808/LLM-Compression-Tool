@@ -33,11 +33,11 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer,
 from transformers.modeling_attn_mask_utils import \
     _prepare_4d_causal_attention_mask
 
-from lib import codebook, utils
-from lib.algo import finetune, quip
-from lib.linear import FusedLinear
-from lib.utils.unsafe_import import model_from_hf_path
-from model.llama import LlamaForCausalLM, LlamaDecoderLayer
+from quantization.quip_sharp.lib import codebook, utils
+from quantization.quip_sharp.lib.algo import finetune, quip
+from quantization.quip_sharp.lib.linear import FusedLinear
+from quantization.quip_sharp.lib.utils.unsafe_import import model_from_hf_path
+from quantization.quip_sharp.model.llama import LlamaForCausalLM, LlamaDecoderLayer
 
 def check_exist(idx, args):
     """检查量化文件是否已存在"""
@@ -224,16 +224,7 @@ def compute_hessian_offline(calibrate,args):
             f"loaded cached dataset from {loaded_dev_activations['timestamp']}"
         )
     elif calibrate is not None and len(calibrate) > 0:
-        # 确保devset是二维tensor [batch_size, seq_len]
-        # 将列表中的张量堆叠成一个张量
         devset = torch.cat(calibrate, dim=0)
-        # 截断或填充到args.ctx_size长度
-        if devset.size(1) > args.ctx_size:
-            devset = devset[:, :args.ctx_size]
-        elif devset.size(1) < args.ctx_size:
-            # 填充到args.ctx_size长度
-            pad_size = args.ctx_size - devset.size(1)
-            devset = torch.nn.functional.pad(devset, (0, pad_size), value=tokenizer.pad_token_id)
         dev_emb = model.model.embed_tokens(devset)
         after_layer = -1
         print("loaded calibrate data!")
@@ -403,14 +394,12 @@ def get_emb(args, kwargs):
     return args[0]
 
 
-def finetune_e2e(args):
+def finetune_e2e(calibrate,args):
     """端到端微调"""
     torch.set_grad_enabled(False)
     tokenizer = AutoTokenizer.from_pretrained(args.base_model)
     tokenizer.pad_token = tokenizer.eos_token
-    devset = utils.sample_rp1t(tokenizer, args.devset_size, args.ctx_size,
-                               args.sample_proc)
-
+    devset = torch.cat(calibrate, dim=0)
     orig_model = AutoModelForCausalLM.from_pretrained(args.base_model,
                                                       torch_dtype='auto',
                                                       device_map='auto',
@@ -543,10 +532,9 @@ def hfize_model(quantized_path,hf_output_path):
     return model
 
 
-def quantize_main(args):
+def quantize_main(calibrate,args):
     """量化主函数"""
     torch.set_grad_enabled(False)
-    dtype_ = torch.float64 if args.use_fp64 else torch.float32
 
     cb = codebook.get_codebook(args.codebook)
 
@@ -573,10 +561,8 @@ def quantize_main(args):
     tokenizer.pad_token = tokenizer.eos_token
     glog.info('loaded model')
 
-    # 使用默认的数据采样方法
-    devset = utils.sample_rp1t(tokenizer, args.devset_size, args.ctx_size,
-                                   args.sample_proc)
-    
+    devset = torch.cat(calibrate, dim=0)
+    print("loaded calibrate data!")
     glog.info('loaded dataset and devset')
 
     nproc = torch.cuda.device_count()
@@ -657,8 +643,8 @@ def quip_sharp_main(calibrate, kwargs):
     """主函数 - 完整的量化微调流程"""
     glog.info("开始完整的 Llama 模型量化微调流程")
     base_model_config,quant_config = kwargs['base_model'],kwargs['quant']
-    main_args, hessian_args, quantize_args, finetune_args = quant_config['main'], quant_config['hessian'], quant_config['quantize'], quant_config['finetune']
-    main_args['save_path'],main_args['ckpt_path'],main_args['base_model'] = main_args['quantized_path'],main_args['quantized_path'],base_model_config['path']
+    main_args, hessian_args, quantize_args, finetune_args, data_args = quant_config['main'], quant_config['hessian'], quant_config['quantize'], quant_config['finetune'],quant_config['data']
+    main_args['save_path'],main_args['ckpt_path'],main_args['base_model'],main_args['ctx_size'],main_args['devset_size'] = main_args['quantized_path'],main_args['quantized_path'],base_model_config['path'],data_args['seqlen'],data_args['nsamples']
     # 设置随机种子
     torch.manual_seed(main_args.seed)
     random.seed(main_args.seed)
@@ -677,18 +663,18 @@ def quip_sharp_main(calibrate, kwargs):
         args = SimpleNamespace(**{**vars(main_args),**vars(hessian_args)})
         compute_hessian_offline(calibrate,args)
 
-    # 步骤2: 量化（如果启用）
+    # # 步骤2: 量化（如果启用）
     if main_args.enable_quantize:
         glog.info("=== 步骤2: 模型量化 ===")
         args = SimpleNamespace(**{**vars(main_args),**vars(quantize_args)})
-        quantize_main(args)
+        quantize_main(calibrate,args)
         
     # 步骤3: 端到端微调（如果启用）
     if main_args.enable_finetune:
         glog.info("=== 步骤3: 端到端微调 ===")
         hfize_model(main_args.quantized_path, main_args.hf_path)
         args = SimpleNamespace(**{**vars(main_args),**vars(finetune_args)})
-        finetune_e2e(args)  
+        finetune_e2e(calibrate,args)  
 
     
     # 步骤4: HuggingFace 格式转换（如果启用）

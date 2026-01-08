@@ -62,6 +62,8 @@ def get_c4(tokenizer, split='validation', nsamples=128, seqlen=2048, seed=42, **
             j = i + seqlen
             inp = trainenc.input_ids[:, i:j]
             trainloader.append(inp)
+        return trainloader
+
 
     if split == 'validation':
         logging.info("get_c4_validation")
@@ -153,8 +155,6 @@ class DataCollatorForCausalLM(object):
     tokenizer: object
     source_max_len: int
     target_max_len: int
-    train_on_source: bool
-    predict_with_generate: bool
 
     def __call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
         # Extract elements
@@ -181,19 +181,14 @@ class DataCollatorForCausalLM(object):
             tokenized_sources_with_prompt['input_ids'],
             tokenized_targets['input_ids']
         ):
-            if not self.predict_with_generate:
-                input_ids.append(torch.tensor(tokenized_source + tokenized_target))
-                if not self.train_on_source:
-                    labels.append(
-                        torch.tensor([IGNORE_INDEX for _ in range(len(tokenized_source))] + copy.deepcopy(tokenized_target))
-                    )
-                else:
-                    labels.append(torch.tensor(copy.deepcopy(tokenized_source + tokenized_target)))
-            else:
-                input_ids.append(torch.tensor(tokenized_source))
+            input_ids.append(torch.tensor(tokenized_source + tokenized_target))
+            labels.append(
+                    torch.tensor([IGNORE_INDEX for _ in range(len(tokenized_source))] + copy.deepcopy(tokenized_target))
+            )
+
         # Apply padding
         input_ids = pad_sequence(input_ids, batch_first=True, padding_value=self.tokenizer.pad_token_id)
-        labels = pad_sequence(labels, batch_first=True, padding_value=IGNORE_INDEX) if not self.predict_with_generate else None
+        labels = pad_sequence(labels, batch_first=True, padding_value=IGNORE_INDEX) 
         data_dict = {
             'input_ids': input_ids,
             'attention_mask':input_ids.ne(self.tokenizer.pad_token_id),
@@ -248,7 +243,6 @@ def make_data_module(tokenizer, args) -> Dict:
         else:
             if os.path.exists(dataset_name):
                 try:
-                    args.dataset_format = args.dataset_format if args.dataset_format else "input-output"
                     full_dataset = local_dataset(dataset_name)
                     return full_dataset
                 except:
@@ -256,38 +250,34 @@ def make_data_module(tokenizer, args) -> Dict:
             else:
                 raise NotImplementedError(f"Dataset {dataset_name} not implemented yet.")
 
-    def format_dataset(dataset, dataset_format):
-        if (
-            dataset_format == 'alpaca' or dataset_format == 'alpaca-clean' or
-            (dataset_format is None and args.dataset in ['alpaca', 'alpaca-clean'])
-        ):
+    def format_dataset(dataset):
+        if  args.dataset in ['alpaca', 'alpaca-clean']:
             dataset = dataset.map(extract_alpaca_dataset, remove_columns=['instruction'])
-        elif dataset_format == 'chip2' or (dataset_format is None and args.dataset == 'chip2'):
+        elif args.dataset == 'chip2':
             dataset = dataset.map(lambda x: {
                 'input': x['text'].split('\n<bot>: ')[0].replace('<human>: ', ''),
                 'output': x['text'].split('\n<bot>: ')[1],
             })
-        elif dataset_format == 'self-instruct' or (dataset_format is None and args.dataset == 'self-instruct'):
+        elif args.dataset == 'self-instruct':
             for old, new in [["prompt", "input"], ["completion", "output"]]:
                 dataset = dataset.rename_column(old, new)
-        elif dataset_format == 'hh-rlhf' or (dataset_format is None and args.dataset == 'hh-rlhf'):
+        elif args.dataset == 'hh-rlhf':
             dataset = dataset.map(lambda x: {
                 'input': '',
                 'output': x['chosen']
             })
-        elif dataset_format == 'oasst1' or (dataset_format is None and args.dataset == 'oasst1'):
+        elif args.dataset == 'oasst1':
             dataset = dataset.map(lambda x: {
                 'input': '',
                 'output': x['text'],
             })
-        elif dataset_format == 'wikitext2' or (dataset_format is None and args.dataset == 'wikitext2'):
+        elif args.dataset == 'wikitext2':
             dataset = dataset.map(lambda x: {
                 'input': '',
                 'output': x['text'],
             })
             dataset = dataset.filter(lambda x: len(x['output'].strip()) > 0)
-        elif dataset_format == 'input-output':
-            # leave as is
+        else:
             pass
         # Remove unused columns.
         dataset = dataset.remove_columns(
@@ -297,40 +287,23 @@ def make_data_module(tokenizer, args) -> Dict:
 
      # Load dataset.
     dataset = load_data(args.dataset)
-    dataset = format_dataset(dataset, args.dataset_format)
+    dataset = format_dataset(dataset)
 
-    # Split train/eval, reduce size
-    if args.do_eval or args.do_predict:
-        if 'eval' in dataset:
-            eval_dataset = dataset['eval']
-        else:
-            print('Splitting train dataset in train and validation according to `eval_dataset_size`')
-            dataset = dataset["train"].train_test_split(
-                test_size=args.eval_dataset_size, shuffle=True, seed=42
-            )
-            eval_dataset = dataset['test']
-        if args.max_eval_samples is not None and len(eval_dataset) > args.max_eval_samples:
-            eval_dataset = eval_dataset.select(range(args.max_eval_samples))
-        if args.group_by_length:
-            eval_dataset = eval_dataset.map(lambda x: {'length': len(x['input']) + len(x['output'])})
-    if args.do_train:
-        train_dataset = dataset['train']
-        if args.max_train_samples is not None and len(train_dataset) > args.max_train_samples:
-            train_dataset = train_dataset.select(range(args.max_train_samples))
-        if args.group_by_length:
-            train_dataset = train_dataset.map(lambda x: {'length': len(x['input']) + len(x['output'])})
+    train_dataset = dataset['train']
+    if args.max_train_samples is not None and len(train_dataset) > args.max_train_samples:
+        train_dataset = train_dataset.select(range(args.max_train_samples))
+    if args.group_by_length:
+        train_dataset = train_dataset.map(lambda x: {'length': len(x['input']) + len(x['output'])})
 
     data_collator = DataCollatorForCausalLM(
         tokenizer=tokenizer,
         source_max_len=args.source_max_len,
-        target_max_len=args.target_max_len,
-        train_on_source=args.train_on_source,
-        predict_with_generate=args.predict_with_generate,
+        target_max_len=args.target_max_len
     )
     return dict(
-        train_dataset=train_dataset if args.do_train else None,
-        eval_dataset=eval_dataset if args.do_eval else None,
-        predict_dataset=eval_dataset if args.do_predict else None,
+        train_dataset=train_dataset,
+        eval_dataset= None,
+        predict_dataset=None,
         data_collator=data_collator
     )
 
