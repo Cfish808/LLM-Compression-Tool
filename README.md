@@ -114,7 +114,7 @@ Quantization (JSQ)
 ## Usage
 ### Quick Start
 ```
-python mian.py --config.yml config/llama_gptq.yml
+python main.py --config config/llama_gptq.yml
 ```
 ### Quantization, Save and Evaluation
 Below is an example of how to set up the quantization process for a model. For detailed information on all available quantization configuration options, please refer to the [quantization configuration guide](configs/README.md).
