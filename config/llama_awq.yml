@@ -1,7 +1,7 @@
 
 base_model:
     type: Llama
-    path: /ssd/yejinyu/llama2_7b/Llama-2-7b-ms
+    path: /netcache/huggingface/llama2_7b/
     torch_dtype: auto
     tokenizer_mode: fast
 quant:
@@ -13,8 +13,8 @@ quant:
       wbit: 2
       abit: 16
       offload: cpu
-      block_sequential: False
-      layer_sequential: False
+      block_sequential: True
+      layer_sequential: True
       w_qtype: per_group
       groupsize: 128
       blocksize: 128
@@ -23,7 +23,7 @@ quant:
       auto_scale: True
       auto_clip: True
       percdamp: 0.01
-      actorder: True
+      actorder: False
     special:
       actorder: True
       static_groups: False
