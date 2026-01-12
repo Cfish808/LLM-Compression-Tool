@@ -48,6 +48,8 @@ def main(config):
 
     if config.get("save", False) and config.get("quant", False):
         model = basemodel.replace_module(new_model, module_type=LinearQuantHub, new_module_type="", display=True)
+        gen_config = model.generation_config
+        gen_config.do_sample = True
         model.save_pretrained(args.save)
         tokenizer.save_pretrained(args.save)
 

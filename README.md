@@ -25,18 +25,9 @@ LLM Compression Tool is a project designed to optimize machine learning inferenc
 
 
 ## TODO
-- AWQ Method Comparison and Optimization: We will conduct comparative experiments with the AWQ method and perform subsequent optimization to further improve our approach.
-- BiLLM.
-
-![](assets/17581806412968.jpg)
-           Fig1. Schematic of the PTQ binarization framework for LLMs
-     
-![](assets/17581807124867.jpg)
-     Fig2. Illustration of salient weight binarization
-     
-     Tab1. PPL result
-![](assets/17581819866630.jpg)
-
+- PTQ + Sparsification
+- PTQ + PTQ
+- Base model extension
 
 
 ## Introduction
@@ -46,21 +37,20 @@ Although LLMs excel in various NLP tasks, their computational and memory demands
 ## Features
 - Support for various quantization algorithms, including:
   - [x] RTN 志炀
-  - [x] GPTQ  
-  - [x] AWQ
-  - [ ] OmniQuant 博瀚
-  - [ ] SPQR 海达
-  - [ ] OWQ 海达
+  - [x] GPTQ 锦宇
+  - [x] AWQ 锦宇
+  - [x] OmniQuant 博瀚
+  - [x] SPQR 海达
+  - [x] OWQ 海达
   - [x] SmoothQuant 博瀚
-  - [ ] QuIP 志炀
-  - [ ] BiLLM
+  - [x] QuIP/QUIP# 志炀
+  - [ ] BiLLM 海达
   - [ ] QAT-LLM
   - [ ] EfficientQAT
-  - [ ] PEQA
-  - [ ] QLoRA
-  - [ ] QA-LoRA
-  - [ ] IR-QLoRA
-  - [ ] LCQ
+  - [x] QLoRA 志炀
+  - [x] QA-LoRA 志炀
+  - [x] IR-QLoRA 博翰
+  - [x] FBI-LLM 志炀
   - [ ] OneBit
   - [ ] mix-precision QAT
   - [ ] Joint Sparsification and
@@ -166,13 +156,13 @@ quant:
       wbit: 3
       abit: 16
       offload: cpu
-      block_sequential: False
-      layer_sequential: False
+      block_sequential: True
+      layer_sequential: True
       w_qtype: per_group
       groupsize: 128
       blocksize: 128
       percdamp: 0.01
-      actorder: True
+      actorder: False
     special:
       actorder: True
       static_groups: False
