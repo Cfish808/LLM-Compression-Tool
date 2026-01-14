@@ -6,7 +6,7 @@ base_model:
   mixed_precision: false
   resume_quant: null
 quant:
-  method: efficientqat
+  method: efficientqat_block
   quant_seq: true
   real_quant: false
   log_output_dir: ./log/
@@ -16,19 +16,17 @@ quant:
   quantize:
     wbits: 2
     group_size: 128
-    bucket_num: 1
-    block_size: 1
     quant_lr: 0.0001
     weight_lr: 0.00001
     min_lr_factor: 20
     clip_grad: 0.3
     wd: 0
     epochs: 2
-    batch_size: 4
+    batch_size: 2
     early_stop: 0
     kd_loss_scale: 0.0
   data:
-    name: c4
+    name: redpajama
     train_size: 4096
     val_size: 64
     training_seqlen: 2048

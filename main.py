@@ -15,7 +15,7 @@ from my_datasets import get_calibrate_loader,make_data_module
 from quantization.layers import LinearQuantHub
 from quantization.llama_seq import llama_sequential, llama_omniquant
 from utils.load_model import BaseModel, get_accelerate_model
-from quantization.efficientqat.block_ap_v1 import block_ap,get_loaders
+from quantization.efficientqat.block_ap import block_ap, get_loaders
 
 
 def main(config):
@@ -42,7 +42,7 @@ def main(config):
             from quantization.fbi_llm.fbi_train import train_fbi
             model = train_fbi(model, calibrate, config)
             new_model = model
-        elif config.quant.method == "efficientqat":
+        elif config.quant.method == "efficientqat_block":
             trainloader, valloader = get_loaders(
                 config.quant.data.name,
                 tokenizer,
@@ -50,8 +50,6 @@ def main(config):
                 config.quant.data.val_size,
                 seed=config.quant.data.seed,
                 seqlen=config.quant.data.training_seqlen,
-                pos_Entropy=config.quant.data.pos_entropy,
-                bucket_num=config.quant.quantize.bucket_num,
                 model_type=config.base_model.type,
             )
             block_ap(
