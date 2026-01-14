@@ -28,8 +28,7 @@ def main(config):
         if config.quant.method in ["qlora", "qalora","irlora"]:
             calibrate = make_data_module(tokenizer=tokenizer, args=config.quant.data)
         else:
-            pass
-            # calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
+            calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
 
 
         if config.quant.method == "omniquant":
