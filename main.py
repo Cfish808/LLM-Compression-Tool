@@ -28,7 +28,8 @@ def main(config):
         if config.quant.method in ["qlora", "qalora","irlora"]:
             calibrate = make_data_module(tokenizer=tokenizer, args=config.quant.data)
         else:
-            calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
+            pass
+            # calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
 
 
         if config.quant.method == "omniquant":
@@ -43,31 +44,20 @@ def main(config):
             model = train_fbi(model, calibrate, config)
             new_model = model
         elif config.quant.method == "efficientqat":
-            args = to_dotdict(flatten_dict(config))
-            from_cache = True
-            cache_trainloader = f'data_tmp/{args.name}_{args.type}_train.cache'
-            cache_valloader = f'data_tmp/{args.name}_{args.type}_val.cache'
-            if os.path.exists(cache_trainloader) and os.path.exists(cache_valloader) and from_cache:
-                trainloader = torch.load(cache_trainloader)
-                logger.info(f"load trainloader from {cache_trainloader}")
-                valloader = torch.load(cache_valloader)
-                logger.info(f"load valloader from {cache_valloader}")
-            else:
-                trainloader, valloader = get_loaders(
-                    args.name,
-                    tokenizer,
-                    args.train_size,
-                    args.val_size,
-                    seed=args.seed,
-                    seqlen=args.training_seqlen,
-                    pos_Entropy=args.pos_entropy,
-                    bucket_num=args.bucket_num
-                )
-                torch.save(trainloader, cache_trainloader)
-                torch.save(valloader, cache_valloader)
+            trainloader, valloader = get_loaders(
+                config.quant.data.name,
+                tokenizer,
+                config.quant.data.train_size,
+                config.quant.data.val_size,
+                seed=config.quant.data.seed,
+                seqlen=config.quant.data.training_seqlen,
+                pos_Entropy=config.quant.data.pos_entropy,
+                bucket_num=config.quant.quantize.bucket_num,
+                model_type=config.base_model.type,
+            )
             block_ap(
                     model,
-                    args,
+                    config,
                     trainloader,
                     valloader,
                     logger,

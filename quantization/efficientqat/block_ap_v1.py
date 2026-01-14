@@ -26,6 +26,7 @@ import os
 from torch.utils.data import Dataset
 
 from utils import efficientqat_utils
+from utils.config_utils import to_dotdict, flatten_dict
 
 
 class BlockTrainDataset(Dataset):
@@ -120,11 +121,13 @@ def cal_logits(input, other_layers, part_model, attention_mask, position_ids, us
 
 def block_ap(
     model,
-    args,
+    config,
     trainloader,
     valloader,
     logger=None,
 ):
+    args = to_dotdict(flatten_dict(config))
+
     logger.info("Starting ...")
     if args.off_load_to_disk:
         logger.info("offload the training dataset to disk, saving CPU memory, but may slowdown the training due to additional I/O...")
@@ -588,13 +591,23 @@ def efficient_get_wikitext2(tokenizer, train_size, val_size, seed, seqlen, test_
 
 
 def get_loaders(
-    name, tokenizer, train_size=128, val_size=64,seed=0, seqlen=2048, test_only=False,pos_Entropy=False, bucket_num=1
+    name, tokenizer, train_size=128, val_size=64,seed=0, seqlen=2048, test_only=False,pos_Entropy=False, bucket_num=1,model_type="llama"
 ):
-    if 'wikitext2' in name:
-        return efficient_get_wikitext2(tokenizer,train_size,val_size,seed,seqlen,test_only)
-    elif 'c4' in name:
-        return efficient_get_c4(tokenizer,train_size,val_size,seed,seqlen,test_only)
-    elif 'redpajama' in name:
-        return get_redpajama(tokenizer,train_size,val_size,seed,seqlen,pos_Entropy=pos_Entropy, bucket_num=bucket_num)
+    from_cache = True
+    cache_trainloader = f'data_tmp/{name}_{model_type}_train.cache'
+    cache_valloader = f'data_tmp/{name}_{model_type}_val.cache'
+    if os.path.exists(cache_trainloader) and os.path.exists(cache_valloader) and from_cache:
+        trainloader = torch.load(cache_trainloader)
+        valloader = torch.load(cache_valloader)
     else:
-        raise NotImplementedError
+        if 'wikitext2' in name:
+            trainloader, valloader = efficient_get_wikitext2(tokenizer,train_size,val_size,seed,seqlen,test_only)
+        elif 'c4' in name:
+            trainloader, valloader = efficient_get_c4(tokenizer,train_size,val_size,seed,seqlen,test_only)
+        elif 'redpajama' in name:
+            trainloader, valloader = get_redpajama(tokenizer,train_size,val_size,seed,seqlen,pos_Entropy=pos_Entropy, bucket_num=bucket_num)
+        else:
+            raise NotImplementedError
+        torch.save(trainloader, cache_trainloader)
+        torch.save(valloader, cache_valloader)
+    return trainloader, valloader
