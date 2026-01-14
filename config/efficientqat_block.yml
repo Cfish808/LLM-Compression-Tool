@@ -3,7 +3,6 @@ base_model:
   path: /netcache/huggingface/llama2_7b
   torch_dtype: auto
   max_memory: 80GiB
-  mixed_precision: false
   resume_quant: null
 quant:
   method: efficientqat_block
@@ -11,6 +10,7 @@ quant:
   real_quant: false
   log_output_dir: ./log/
   cache_dir: ./cache
+  mixed_precision: false
   maskfile_dir: ./salient_columns.json
   off_load_to_disk: false
   quantize:
