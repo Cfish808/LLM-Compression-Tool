@@ -4,14 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="da86e97b-e91d-4d9e-a5c9-284ab46a84c0" name="Default Changelist" comment="Default Changelist">
-      <change afterPath="$PROJECT_DIR$/utils/config_utils.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/utils/efficientqat_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/efficientqat.yml" beforeDir="false" afterPath="$PROJECT_DIR$/config/efficientqat.yml" afterDir="false" />
+    <list default="true" id="da86e97b-e91d-4d9e-a5c9-284ab46a84c0" name="Default Changelist" comment="更新补充">
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/my_datasets/data_loader.py" beforeDir="false" afterPath="$PROJECT_DIR$/my_datasets/data_loader.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/load_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/load_model.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -69,13 +63,13 @@
       <window_info id="Commit_Guest" show_stripe_button="false" />
       <window_info id="Pull Requests" />
       <window_info id="Learn" />
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.20787796" />
-      <window_info id="Commit" order="1" weight="0.20787796" />
+      <window_info content_ui="combo" id="Project" order="0" weight="0.20787796" />
+      <window_info active="true" id="Commit" order="1" visible="true" weight="0.20787796" />
       <window_info id="Structure" order="2" side_tool="true" weight="0.25" />
       <window_info anchor="bottom" id="Database Changes" />
       <window_info anchor="bottom" id="TypeScript" />
       <window_info anchor="bottom" id="File Transfer" />
-      <window_info active="true" anchor="bottom" id="Version Control" order="0" visible="true" weight="0.45159933" />
+      <window_info anchor="bottom" id="Version Control" order="0" weight="0.45159933" />
       <window_info anchor="bottom" id="Problems" order="1" />
       <window_info anchor="bottom" id="Problems View" order="2" />
       <window_info anchor="bottom" id="Terminal" order="3" />
@@ -151,7 +145,7 @@
       <updated>1768184868694</updated>
       <workItem from="1768184873111" duration="1777000" />
       <workItem from="1768366573837" duration="1017000" />
-      <workItem from="1768367701918" duration="3400000" />
+      <workItem from="1768367701918" duration="4129000" />
     </task>
     <task id="LOCAL-00001" summary="Default Changelist">
       <option name="closed" value="true" />
@@ -161,7 +155,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768368484556</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="更新补充">
+      <option name="closed" value="true" />
+      <created>1768371261740</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1768371261740</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -169,14 +171,15 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Default Changelist" />
-    <option name="LAST_COMMIT_MESSAGE" value="Default Changelist" />
+    <MESSAGE value="更新补充" />
+    <option name="LAST_COMMIT_MESSAGE" value="更新补充" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>31</line>
+          <line>30</line>
           <option name="timeStamp" value="1" />
         </line-breakpoint>
       </breakpoints>
