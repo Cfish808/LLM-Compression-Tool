@@ -269,7 +269,7 @@ def get_c4(tokenizer, split='validation', nsamples=128, seqlen=2048, seed=42, **
 
     if split == 'validation':
         logging.info("get_c4_validation")
-        valdata = load_dataset("./c4_local",
+        valdata = load_dataset("allenai/c4",
                             # "allenai/c4",
                                data_files={'validation': 'en/c4-validation.00000-of-00008.json.gz'},
                                split='validation')

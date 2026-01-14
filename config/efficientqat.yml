@@ -1,7 +1,7 @@
 base_model:
   type: Llama
   path: /netcache/huggingface/llama2_7b
-  torch_dtype: torch.float16
+  torch_dtype: auto
   max_memory: 80GiB
   mixed_precision: false
   resume_quant: null
@@ -28,7 +28,7 @@ quant:
     early_stop: 0
     kd_loss_scale: 0.0
   data:
-    calib_dataset: c4
+    name: c4
     train_size: 4096
     val_size: 64
     training_seqlen: 2048

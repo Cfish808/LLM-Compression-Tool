@@ -28,7 +28,8 @@ def main(config):
         if config.quant.method in ["qlora", "qalora","irlora"]:
             calibrate = make_data_module(tokenizer=tokenizer, args=config.quant.data)
         else:
-            calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
+            pass
+            # calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
 
 
         if config.quant.method == "omniquant":
@@ -45,8 +46,8 @@ def main(config):
         elif config.quant.method == "efficientqat":
             args = to_dotdict(flatten_dict(config))
             from_cache = True
-            cache_trainloader = f'data_tmp/{args.calib_dataset}_{args.type}_train.cache'
-            cache_valloader = f'data_tmp/{args.calib_dataset}_{args.type}_val.cache'
+            cache_trainloader = f'data_tmp/{args.name}_{args.type}_train.cache'
+            cache_valloader = f'data_tmp/{args.name}_{args.type}_val.cache'
             if os.path.exists(cache_trainloader) and os.path.exists(cache_valloader) and from_cache:
                 trainloader = torch.load(cache_trainloader)
                 logger.info(f"load trainloader from {cache_trainloader}")
@@ -54,7 +55,7 @@ def main(config):
                 logger.info(f"load valloader from {cache_valloader}")
             else:
                 trainloader, valloader = get_loaders(
-                    args.calib_dataset,
+                    args.name,
                     tokenizer,
                     args.train_size,
                     args.val_size,
@@ -107,7 +108,7 @@ if __name__ == '__main__':
     logger.add(sys.stdout, level='INFO')
     llmc_start_time = time.time()
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default="/home/yejinyu/model-quantification-tool/config/efficientqat.yml", type=str)
+    parser.add_argument('--config', default="config/efficientqat.yml", type=str)
     args = parser.parse_args()
     import os
 
