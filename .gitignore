@@ -4,3 +4,4 @@ quantization/base_quantization.py
 quantization/GPTQ.py
 benchmark
 utils/benchmark.py
+.idea
