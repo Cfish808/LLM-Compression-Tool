@@ -6,12 +6,16 @@ import torch
 import yaml
 from easydict import EasyDict
 from loguru import logger
+from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
+
+from utils.config_utils import to_dotdict,flatten_dict
 
 from eval.eval_by_category import run_evaluation
 from my_datasets import get_calibrate_loader,make_data_module
 from quantization.layers import LinearQuantHub
 from quantization.llama_seq import llama_sequential, llama_omniquant
 from utils.load_model import BaseModel, get_accelerate_model
+from quantization.efficientqat.block_ap_v1 import block_ap,get_loaders
 
 
 def main(config):
@@ -20,10 +24,13 @@ def main(config):
     model = basemodel.build_model()
     new_model = None
     if config.get("quant", False):
+
         if config.quant.method in ["qlora", "qalora","irlora"]:
             calibrate = make_data_module(tokenizer=tokenizer, args=config.quant.data)
         else:
             calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
+
+
         if config.quant.method == "omniquant":
             model = llama_omniquant(config.base_model.path, model, calibrate, config.quant, logger=logger)
             new_model = model
@@ -35,6 +42,36 @@ def main(config):
             from quantization.fbi_llm.fbi_train import train_fbi
             model = train_fbi(model, calibrate, config)
             new_model = model
+        elif config.quant.method == "efficientqat":
+            args = to_dotdict(flatten_dict(config))
+            from_cache = True
+            cache_trainloader = f'data_tmp/{args.calib_dataset}_{args.type}_train.cache'
+            cache_valloader = f'data_tmp/{args.calib_dataset}_{args.type}_val.cache'
+            if os.path.exists(cache_trainloader) and os.path.exists(cache_valloader) and from_cache:
+                trainloader = torch.load(cache_trainloader)
+                logger.info(f"load trainloader from {cache_trainloader}")
+                valloader = torch.load(cache_valloader)
+                logger.info(f"load valloader from {cache_valloader}")
+            else:
+                trainloader, valloader = get_loaders(
+                    args.calib_dataset,
+                    tokenizer,
+                    args.train_size,
+                    args.val_size,
+                    seed=args.seed,
+                    seqlen=args.training_seqlen,
+                    pos_Entropy=args.pos_entropy,
+                    bucket_num=args.bucket_num
+                )
+                torch.save(trainloader, cache_trainloader)
+                torch.save(valloader, cache_valloader)
+            block_ap(
+                    model,
+                    args,
+                    trainloader,
+                    valloader,
+                    logger,
+                )
         elif config.quant.method in ["qlora", "qalora","irlora"]:
             from quantization.qlora.qlora import train
             model,tokenizer = get_accelerate_model(config.base_model,config.quant.method)
@@ -70,7 +107,7 @@ if __name__ == '__main__':
     logger.add(sys.stdout, level='INFO')
     llmc_start_time = time.time()
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default="/home/yejinyu/model-quantification-tool/config/llama_gptq.yml", type=str)
+    parser.add_argument('--config', default="/home/yejinyu/model-quantification-tool/config/efficientqat.yml", type=str)
     args = parser.parse_args()
     import os
 

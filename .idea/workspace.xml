@@ -1,9 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="da86e97b-e91d-4d9e-a5c9-284ab46a84c0" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/llama_gptq.yml" beforeDir="false" afterPath="$PROJECT_DIR$/config/llama_gptq.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/config/efficientqat.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/quantization/efficientqat/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/quantization/efficientqat/block_ap_blocksize.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/quantization/efficientqat/block_ap_v1.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/quantization/efficientqat/int_linear_fake.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/quantization/efficientqat/int_linear_real.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/quantization/efficientqat/int_linear_real_v1.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/quantization/efficientqat/quantizer.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/quantization/efficientqat/triton_utils/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/quantization/efficientqat/triton_utils/custom_autotune.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/quantization/efficientqat/triton_utils/kernels.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/quantization/efficientqat/triton_utils/mixin.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/quantization/efficientqat/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/my_datasets/data_loader.py" beforeDir="false" afterPath="$PROJECT_DIR$/my_datasets/data_loader.py" afterDir="false" />
     </list>
@@ -15,16 +30,75 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
   <component name="ProjectId" id="388cvOSQ6xyUBBxHLec8d3z5if9" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">
-    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
-    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "last_opened_file_path": "/home/yejinyu/LLM-Compression-Tool",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RdControllerToolWindowsLayoutState" isNewUi="true">
+    <layout>
+      <window_info id="Bookmarks" side_tool="true" />
+      <window_info id="Merge Requests" />
+      <window_info id="AI Playground" side_tool="true" />
+      <window_info id="Backup and Sync History" />
+      <window_info id="Commit_Guest" show_stripe_button="false" />
+      <window_info id="Pull Requests" />
+      <window_info id="Learn" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.20787796" />
+      <window_info id="Commit" order="1" weight="0.25" />
+      <window_info id="Structure" order="2" side_tool="true" weight="0.25" />
+      <window_info anchor="bottom" id="Database Changes" />
+      <window_info anchor="bottom" id="TypeScript" />
+      <window_info anchor="bottom" id="File Transfer" />
+      <window_info anchor="bottom" id="Version Control" order="0" />
+      <window_info anchor="bottom" id="Problems" order="1" />
+      <window_info anchor="bottom" id="Problems View" order="2" />
+      <window_info anchor="bottom" id="Terminal" order="3" />
+      <window_info anchor="bottom" x="80" y="382" width="2114" height="394" id="Debug" order="4" sideWeight="0.6199149" weight="0.6435185" />
+      <window_info anchor="bottom" id="Services" order="5" />
+      <window_info anchor="bottom" id="Python Packages" order="6" weight="0.1" />
+      <window_info anchor="bottom" id="Python Console" order="7" weight="0.1" />
+      <window_info anchor="bottom" id="Find" order="8" weight="0.9162458" />
+      <window_info active="true" anchor="bottom" id="Run" order="9" visible="true" weight="0.35732323" />
+      <window_info anchor="bottom" id="HfCacheToolWindow" order="10" weight="0.7811973" />
+      <window_info anchor="bottom" id="TODO" order="11" sideWeight="0.5002365" weight="0.57112795" />
+      <window_info anchor="right" id="Endpoints" />
+      <window_info anchor="right" id="documentation.v2" show_stripe_button="false" side_tool="true" />
+      <window_info anchor="right" id="Coverage" side_tool="true" />
+      <window_info anchor="right" id="Jupyter Variables" side_tool="true" />
+      <window_info anchor="right" content_ui="combo" id="Notifications" order="0" weight="0.25" />
+      <window_info anchor="right" id="AIAssistant" order="1" weight="0.25" />
+      <window_info anchor="right" id="Database" order="2" weight="0.25" />
+      <window_info anchor="right" id="Gradle" order="3" weight="0.25" />
+      <window_info anchor="right" id="Maven" order="4" weight="0.25" />
+      <window_info anchor="right" id="Plots" order="5" weight="0.1" />
+      <window_info anchor="right" id="Translation.Wordbook" order="6" side_tool="true" />
+      <window_info anchor="right" id="SciView" order="7" weight="0.33044666" />
+    </layout>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-b598e85cdad2-JavaScript-PY-252.25557.70" />
+        <option value="bundled-python-sdk-92aec933e02e-7b97d883f26b-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-252.25557.70" />
+      </set>
+    </attachedChunks>
   </component>
   <component name="SvnConfiguration">
     <configuration />
@@ -37,10 +111,12 @@
       <option name="presentableId" value="Default" />
       <updated>1768184868694</updated>
       <workItem from="1768184873111" duration="1777000" />
+      <workItem from="1768366573837" duration="1017000" />
+      <workItem from="1768367701918" duration="667000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
-    <option name="version" value="2" />
+    <option name="version" value="3" />
   </component>
 </project>

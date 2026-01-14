@@ -1,6 +1,9 @@
+import json
 import random
 import logging
+from collections import defaultdict
 
+import nltk
 import numpy as np
 import torch
 
@@ -11,10 +14,209 @@ from .load_boss import get_calibrate_boss
 
 import os
 
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Sequence
 from torch.nn.utils.rnn import pad_sequence
+
+def get_redpajama(tokenizer, train_size, val_size, seed, seqlen, pos_Entropy=False, bucket_num=1, shuffle=False):
+    print(f"get_redpajama pos_Entropy: {pos_Entropy}, bucket_num: {bucket_num}, shuffle: {shuffle}")
+    try:
+        loacal_dataset = "/cpfs01/user/chenmengzhao/huggingface/datasets/togethercomputer___red_pajama-data-1_t-sample"
+        traindata = load_dataset(loacal_dataset, split='train')
+    except:
+        traindata = load_dataset("togethercomputer/RedPajama-Data-1T-Sample", split='train')
+    source_map = json.loads(open("data/AllDataToDict.json").read())
+    random.seed(seed)
+    traindata = traindata.shuffle(seed=seed)
+    trainloader = []
+    if pos_Entropy:
+        trainText_posEntropy = defaultdict(list)
+        trainloader_dict = defaultdict(list)
+    val_sample_ratio = 0.9
+    print("**********start the trainloader.************")
+
+    def sort_with_index(lst):
+        indexed_lst = list(enumerate(lst))
+        sorted_lst = sorted(indexed_lst, key=lambda x: x[1])
+        sorted_indices = [index for index, value in sorted_lst]
+
+        return sorted_indices
+
+    for _ in range(train_size):
+        while True:
+            i = random.randint(0, int(len(traindata) * val_sample_ratio) - 1)
+            trainenc = tokenizer(traindata[i]['text'], return_tensors='pt')
+            if trainenc.input_ids.shape[1] >= seqlen + 1:
+                break
+        start = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+        end = start + seqlen
+        inp = trainenc.input_ids[:, start:end]
+        tar = inp.clone()
+        tar[:, :-1] = -100
+
+        if pos_Entropy:
+            text_source = source_map[traindata[i]['text']]
+            text_tokens = nltk.word_tokenize(traindata[i]['text'])[: seqlen]
+            pos_tags = nltk.pos_tag(text_tokens)
+            counter = defaultdict(int)
+            for word, pos in pos_tags:
+                counter[pos] += 1
+            total = sum(counter.values())
+            pe = sum(-count / total * np.log(count / total) for count in counter.values())
+            trainText_posEntropy[text_source].append(pe)
+            trainloader_dict[text_source].append((inp, tar, pe))
+        else:
+            trainloader.append((inp, tar))
+
+    print("**********finish the trainloader.************")
+    if pos_Entropy:
+        for text_source, PEs in trainText_posEntropy.items():
+            data_index = sort_with_index(PEs)
+            sub_dataloader = trainloader_dict[text_source]
+            sub_dataloader = [sub_dataloader[idx] for idx in data_index]
+            sub_dataloader_pe = [PEs[idx] for idx in data_index]
+            bucket_size = len(sub_dataloader) // bucket_num
+            trainloader_dict[text_source] = [
+                sub_dataloader[bucket_index * bucket_size: (bucket_index + 1) * bucket_size] for bucket_index in
+                range(bucket_num)]
+            trainloader_dict[text_source][-1] = trainloader_dict[text_source][-1] + sub_dataloader[
+                bucket_size * bucket_num:]
+        for bucket_index in range(bucket_num):
+            sub_bucket = []
+            for text_source, sub_trainloader in trainloader_dict.items():
+                sub_bucket.extend(sub_trainloader[bucket_index])
+            if shuffle:
+                random.shuffle(sub_bucket)
+            else:
+                pe_index = sort_with_index([item[-1] for item in sub_bucket])
+                sub_bucket = [sub_bucket[indx] for indx in pe_index]
+
+            trainloader = trainloader + sub_bucket
+        trainloader = [item[: 2] for item in trainloader]
+
+    valloader = []
+    for _ in range(val_size):
+        while True:
+            i = random.randint(int(len(traindata) * val_sample_ratio), len(traindata) - 1)
+            trainenc = tokenizer(traindata[i]['text'], return_tensors='pt')
+            if trainenc.input_ids.shape[1] >= seqlen + 1:
+                break
+        i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+        j = i + seqlen
+        inp = trainenc.input_ids[:, i:j]
+        tar = inp.clone()
+        tar[:, :-1] = -100
+        valloader.append((inp, tar))
+    return trainloader, valloader
+
+
+def get_redpajama_v1(tokenizer, train_size, val_size, seed, seqlen, pos_Entropy=False, bucket_num=1):
+    print("get_redpajama")
+    try:
+        loacal_dataset = "/cpfs01/user/chenmengzhao/huggingface/datasets/togethercomputer___red_pajama-data-1_t-sample"
+        traindata = load_dataset(loacal_dataset, split='train')
+    except:
+        traindata = load_dataset("togethercomputer/RedPajama-Data-1T-Sample", split='train')
+    random.seed(seed)
+    traindata = traindata.shuffle(seed=seed)
+    trainloader = []
+    trainloader_mata = []
+    trainText_posEntropy = []
+    val_sample_ratio = 0.9
+    print("**********start the trainloader.************")
+
+    def sort_with_index(lst):
+        indexed_lst = list(enumerate(lst))
+        sorted_lst = sorted(indexed_lst, key=lambda x: x[1])
+        sorted_indices = [index for index, value in sorted_lst]
+
+        return sorted_indices
+
+    for _ in range(train_size):
+        while True:
+            i = random.randint(0, int(len(traindata) * val_sample_ratio) - 1)
+            trainenc = tokenizer(traindata[i]['text'], return_tensors='pt')
+            if trainenc.input_ids.shape[1] >= seqlen + 1:
+                trainloader_mata.append(traindata[i])
+                break
+        start = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+        end = start + seqlen
+        inp = trainenc.input_ids[:, start:end]
+        tar = inp.clone()
+        tar[:, :-1] = -100
+        trainloader.append((inp, tar))
+        if pos_Entropy:
+            text_tokens = nltk.word_tokenize(traindata[i]['text'])[: seqlen]
+            pos_tags = nltk.pos_tag(text_tokens)
+            counter = defaultdict(int)
+            for word, pos in pos_tags:
+                counter[pos] += 1
+            total = sum(counter.values())
+            pe = sum(-count / total * np.log(count / total) for count in counter.values())
+            trainText_posEntropy.append(pe)
+
+    import json
+    json.dump(trainloader_mata, open("trainloader_mata.json", "w"))
+    print("**********finish the trainloader.************")
+    if pos_Entropy:
+        data_index = sort_with_index(trainText_posEntropy)
+        refine_trainloader = [trainloader[idx] for idx in data_index]
+        trainloader = refine_trainloader
+        if bucket_num > 1:
+            bucket_size = len(trainloader) // bucket_num
+            for bucket_index in range(bucket_num):
+                bucket_data = trainloader[bucket_index * bucket_size: (bucket_index + 1) * bucket_size]
+                random.shuffle(bucket_data)
+
+    valloader = []
+    for _ in range(val_size):
+        while True:
+            i = random.randint(int(len(traindata) * val_sample_ratio), len(traindata) - 1)
+            trainenc = tokenizer(traindata[i]['text'], return_tensors='pt')
+            if trainenc.input_ids.shape[1] >= seqlen + 1:
+                break
+        i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+        j = i + seqlen
+        inp = trainenc.input_ids[:, i:j]
+        tar = inp.clone()
+        tar[:, :-1] = -100
+        valloader.append((inp, tar))
+    return trainloader, valloader
+
+
+def get_redpajama_v0(tokenizer, train_size, val_size, seed, seqlen, pos_Entropy=False, bucket_num=1, shuffle=False):
+    print("get_ranked_redpajama")
+    import json
+    # fill the ranked data path
+    traindata = json.loads(open("/mnt/usercache/zxy/EfficientQAT/data/all_8192_trainloader4.json").read())
+    trainloader = []
+
+    error_count = 0
+    for i in range(min(train_size, len(traindata))):
+        trainenc = tokenizer(traindata[i]['text'], return_tensors='pt')
+        if trainenc.input_ids.shape[1] < seqlen:
+            print("length: ######", trainenc.input_ids.shape[1])
+            print(traindata[i]['meta'])
+            error_count += 1
+            continue
+        # start = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+        # end = start + seqlen
+        # inp = trainenc.input_ids[:, start:end]
+        inp = trainenc.input_ids[:, : seqlen]
+        tar = inp.clone()
+        tar[:, :-1] = -100
+        trainloader.append((inp, tar))
+
+    if len(trainloader) != train_size:
+        raise ValueError(f"the size of trainloader is not equal to {train_size} . the error_count is {error_count}")
+    if shuffle:
+        random.seed(seed)
+        traindata = traindata.shuffle(seed=seed)
+
+    valloader = trainloader[: val_size]
+
+    return trainloader, valloader
 
 
 def get_wikitext2(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwargs):
