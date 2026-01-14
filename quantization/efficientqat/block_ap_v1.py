@@ -550,43 +550,33 @@ def efficient_get_c4(tokenizer, train_size, val_size,seed, seqlen, test_only,nsa
 
 def efficient_get_wikitext2(tokenizer, train_size, val_size, seed, seqlen, test_only):
     print("get_wikitext2")
+    traindata = load_dataset('wikitext', 'wikitext-2-raw-v1', split='train')
+    testdata = load_dataset('wikitext', 'wikitext-2-raw-v1', split='test')
 
-    # -------- test / perplexity --------
-    test_chunks = get_wikitext2(
-        tokenizer,
-        split='test',
-        nsamples='all',
-        seqlen=seqlen,
-        seed=seed,
-    )
-
-    testenc = torch.hstack(test_chunks)
-
+    testenc = tokenizer("\n\n".join(testdata['text']), return_tensors='pt')
     if test_only:
         return testenc
+    trainenc = tokenizer("\n\n".join(traindata['text']), return_tensors='pt')
 
-    # -------- train --------
-    # 一次性采 train + val，避免 overlap
-    all_train_chunks = get_wikitext2(
-        tokenizer,
-        split='train',
-        nsamples=train_size + val_size,
-        seqlen=seqlen,
-        seed=seed,
-    )
-
-    def make_lm_pair(inp):
+    random.seed(seed)
+    trainloader = []
+    val_sample_ratio = 0.9  # sample train from [0:0.9] and val from [0.9:1.0] to avoid overlap
+    for _ in range(train_size):
+        i = random.randint(0, int(trainenc.input_ids.shape[1] * val_sample_ratio) - seqlen - 1)
+        j = i + seqlen
+        inp = trainenc.input_ids[:, i:j]
         tar = inp.clone()
         tar[:, :-1] = -100
-        return inp, tar
-
-    trainloader = [
-        make_lm_pair(x) for x in all_train_chunks[:train_size]
-    ]
-    valloader = [
-        make_lm_pair(x) for x in all_train_chunks[train_size:]
-    ]
-
+        trainloader.append((inp, tar))
+    valloader = []
+    for _ in range(val_size):
+        i = random.randint(int(trainenc.input_ids.shape[1] * val_sample_ratio) - seqlen - 1,
+                           trainenc.input_ids.shape[1] - seqlen - 1)
+        j = i + seqlen
+        inp = trainenc.input_ids[:, i:j]
+        tar = inp.clone()
+        tar[:, :-1] = -100
+        valloader.append((inp, tar))
     return trainloader, valloader
 
 
