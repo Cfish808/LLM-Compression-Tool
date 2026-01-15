@@ -7,9 +7,7 @@ import yaml
 from easydict import EasyDict
 from loguru import logger
 from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
-
 from utils.config_utils import to_dotdict,flatten_dict
-
 from eval.eval_by_category import run_evaluation
 from my_datasets import get_calibrate_loader,make_data_module
 from quantization.layers import LinearQuantHub
@@ -17,17 +15,19 @@ from quantization.llama_seq import llama_sequential, llama_omniquant
 from utils.load_model import BaseModel, get_accelerate_model
 from quantization.efficientqat.block_ap import block_ap, get_loaders
 
-
 def main(config):
-    basemodel = BaseModel(config)
-    tokenizer = basemodel.build_tokenizer()
-    model = basemodel.build_model()
+    if config.quant.method is not  "efficientqat_e2e":
+        basemodel = BaseModel(config)
+        tokenizer = basemodel.build_tokenizer()
+        model = basemodel.build_model()
+
     new_model = None
     if config.get("quant", False):
 
         if config.quant.method in ["qlora", "qalora","irlora"]:
             calibrate = make_data_module(tokenizer=tokenizer, args=config.quant.data)
-        else:
+        elif config.quant.method not in ["efficientqat_e2e","efficientqat_block"]:
+            # pass
             calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
 
 
@@ -59,6 +59,9 @@ def main(config):
                     valloader,
                     logger,
                 )
+        elif config.quant.method == "efficientqat_e2e":
+            from quantization.efficientqat.e2e import train
+            train(config)
         elif config.quant.method in ["qlora", "qalora","irlora"]:
             from quantization.qlora.qlora import train
             model,tokenizer = get_accelerate_model(config.base_model,config.quant.method)
@@ -94,7 +97,7 @@ if __name__ == '__main__':
     logger.add(sys.stdout, level='INFO')
     llmc_start_time = time.time()
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default="config/efficientqat.yml", type=str)
+    parser.add_argument('--config', default="config/efficientqat_e2e_2.yml", type=str)
     args = parser.parse_args()
     import os
 
