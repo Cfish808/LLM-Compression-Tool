@@ -8,21 +8,27 @@ from easydict import EasyDict
 from loguru import logger
 
 from eval.eval_by_category import run_evaluation
-from my_datasets import get_calibrate_loader,make_data_module
+from my_datasets import get_calibrate_loader,make_data_module,get_dataset_loader
 from quantization.layers import LinearQuantHub
 from quantization.llama_seq import llama_sequential, llama_omniquant
-from utils.load_model import BaseModel, get_accelerate_model
+from utils.load_model import BaseModel, get_accelerate_model, load_model_and_tokenizer
 
 
 def main(config):
-    basemodel = BaseModel(config)
-    tokenizer = basemodel.build_tokenizer()
-    model = basemodel.build_model()
     new_model = None
     if config.get("quant", False):
         if config.quant.method in ["qlora", "qalora","irlora"]:
+            model,tokenizer = get_accelerate_model(config.base_model,config.quant.method)
             calibrate = make_data_module(tokenizer=tokenizer, args=config.quant.data)
+        elif config.quant.method == "onebit":
+            from quantization.onebit.core import get_train_args
+            model_args, data_args, training_args, finetuning_args = get_train_args(config.quant.args)
+            model,tokenizer = load_model_and_tokenizer(model_args,finetuning_args,training_args.do_train)
+            calibrate = get_dataset_loader(tokenizer=tokenizer, data_args=data_args, training_args=training_args)
         else:
+            basemodel = BaseModel(config)
+            tokenizer = basemodel.build_tokenizer()
+            model = basemodel.build_model()
             calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
         if config.quant.method == "omniquant":
             model = llama_omniquant(config.base_model.path, model, calibrate, config.quant, logger=logger)
@@ -37,8 +43,11 @@ def main(config):
             new_model = model
         elif config.quant.method in ["qlora", "qalora","irlora"]:
             from quantization.qlora.qlora import train
-            model,tokenizer = get_accelerate_model(config.base_model,config.quant.method)
             model = train(model=model,tokenizer=tokenizer,calibrate_data=calibrate, args=config.quant.args)
+            new_model = model
+        elif config.quant.method == "onebit":
+            from quantization.onebit.kd import run_kd
+            model = run_kd(model=model,tokenizer=tokenizer,dataset=calibrate,model_args=model_args,data_args=data_args,training_args=training_args)
             new_model = model
         else:
             new_model = basemodel.replace_module(model, exclude_layers=config.quant.skip_layers, include_layers=['.*'])
@@ -70,7 +79,8 @@ if __name__ == '__main__':
     logger.add(sys.stdout, level='INFO')
     llmc_start_time = time.time()
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default="/home/yejinyu/model-quantification-tool/config/llama_gptq.yml", type=str)
+    parser.add_argument('--config', default="/home/xzy/LLM-Compression-Tool/config/onebit.yml", type=str)
+    parser.add_argument("--local_rank", type=int, default=-1, help="Local rank for distributed training")
     args = parser.parse_args()
     import os
 
