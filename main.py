@@ -7,16 +7,13 @@ import yaml
 from easydict import EasyDict
 from loguru import logger
 from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
-
 from utils.config_utils import to_dotdict,flatten_dict
-
 from eval.eval_by_category import run_evaluation
 from my_datasets import get_calibrate_loader,make_data_module,get_dataset_loader
 from quantization.layers import LinearQuantHub
 from quantization.llama_seq import llama_sequential, llama_omniquant
 from utils.load_model import BaseModel, get_accelerate_model, load_model_and_tokenizer
 from quantization.efficientqat.block_ap import block_ap, get_loaders
-
 
 def main(config):
     new_model = None
