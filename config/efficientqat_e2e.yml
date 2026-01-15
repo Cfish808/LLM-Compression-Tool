@@ -1,16 +1,15 @@
 base_model:
-  path: /ssd/yejinyu/EfficientQAT_1/output/block_ap_models/Llama-3-8b-w2g128_4096_mixed-precision_3mask_test_wikipedia_2.87bits   #quant_model_path
+  path: /ssd/yejinyu/EfficientQAT_1/output/block_ap_models/Llama-3-8b-w2g128_4096_mixed-precision_3mask_test_wikipedia_2.87bits
   real_quant: false
   mixed_precision: true
   maskfile_dir: /home/yejinyu/EfficientQAT_1/wikipedia_salient_columns/wikipedia_salient_columns_llama3_8b_up_lim10.json
-  type: llama3  #model_family
+  type: llama3
   trust_remote_code: false
   use_auth_token: false
-  bf16: true
   torch_dtype: auto
 
 data:
-  name: c4
+  name: redpajama
   dataset_format: pt
   conv_temp: llama-2
   mask_use: true
@@ -22,7 +21,7 @@ data:
   source_max_len: 2048
   target_max_len: 256
   max_train_samples: 50000
-  seed: 2
+  max_eval_samples: 64
 
 quant:
   method: efficientqat_e2e
@@ -31,9 +30,11 @@ quant:
   full_finetune: false
   pt_context_len: 2048
   wbits: 2
+  seed: 2
+  bf16: true
   group_size: 128
   should_save: true
-  learning_rate: 5e-5
+  learning_rate: 0.00005
   weight_decay: 0.0
   max_grad_norm: 0.5
   should_log: true
@@ -41,8 +42,6 @@ quant:
   gradient_accumulation_steps: 32
   max_steps: 0
   max_memory_MB: 80000
-  epochs: 2
-  early_stop: 0
 
   optim: paged_adamw_32bit
   lr_scheduler_type: cosine

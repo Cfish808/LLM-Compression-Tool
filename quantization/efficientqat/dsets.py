@@ -275,7 +275,7 @@ def preprocess_dataset(
     preprocess_func = preprocess_pretrain_dataset
     print_function = print_unsupervised_dataset_example
 
-    cache_dataloader = f'{data_args.cache_path}/e2e_dataloader_{data_args.name}_{model_args.model_family}_{training_args.pt_context_len}_{data_args.max_train_samples}.cache'
+    cache_dataloader = f'{data_args.cache_path}/e2e_dataloader_{data_args.name}_{model_args.type}_{training_args.pt_context_len}_{data_args.max_train_samples}.cache'
     if data_args.cache_path is not None and os.path.exists(cache_dataloader):
         print("Loading dataset from disk will ignore other data arguments.")
         return load_from_disk(cache_dataloader)

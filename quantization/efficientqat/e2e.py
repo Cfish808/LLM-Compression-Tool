@@ -1,6 +1,7 @@
 # This file is modified from https://github.com/artidoro/qlora/blob/main/qlora.py
 import json
 import warnings
+from dataclasses import field, dataclass
 from os.path import exists, join, isdir
 from typing import Optional, Dict
 import numpy as np
@@ -27,6 +28,8 @@ from quantization.efficientqat.int_linear_real import load_quantized_model, Quan
 from pathlib import Path
 
 from utils.config_utils import flatten_dict, to_dotdict
+# from transformers import TrainingArguments
+import inspect, argparse
 
 
 def is_ipex_available():
@@ -59,6 +62,209 @@ IGNORE_INDEX = -100
 DEFAULT_PAD_TOKEN = "[PAD]"
 
 
+@dataclass
+class ModelArguments:
+    path: Optional[str] = field(
+        default="",
+        metadata={"help": "path of the quantization model by Block-AP."}
+    )
+    torch_dtype: Optional[str] = field(
+        default="",
+        metadata={"help": "path of the quantization model by Block-AP."}
+    )
+    real_quant: bool = field(
+        default=True, metadata={"help": "reload the quant model or not."}
+    )
+    mixed_precision: bool = field(
+        default=False, metadata={"help": "reload the quant model or not."}
+    )
+    maskfile_dir: Optional[str] = field(
+        default="./salient_columns.json",
+        metadata={"help": "direction of mask file"}
+    )
+    type: Optional[str] = field(
+        default="llama-2",
+        metadata={"help": "for the saving of dataset cache for faster experiments"}
+    )
+    trust_remote_code: Optional[bool] = field(
+        default=False,
+        metadata={"help": "Enable unpickling of arbitrary code in AutoModelForCausalLM#from_pretrained."}
+    )
+    use_auth_token: Optional[bool] = field(
+        default=False,
+        metadata={"help": "Enables using Huggingface auth token from Git Credentials."}
+    )
+
+@dataclass
+class DataArguments:
+    eval_dataset_size: int = field(
+        default=1024, metadata={"help": "Size of validation dataset."}
+    )
+    max_train_samples: Optional[int] = field(
+        default=None,
+        metadata={
+            "help": "For debugging purposes or quicker training, truncate the number of training examples to this "
+            "value if set."
+        },
+    )
+    max_eval_samples: Optional[int] = field(
+        default=None,
+        metadata={
+            "help": "For debugging purposes or quicker training, truncate the number of evaluation examples to this "
+            "value if set."
+        },
+    )
+    source_max_len: int = field(
+        default=1024,
+        metadata={"help": "Maximum source sequence length. Sequences will be right padded (and possibly truncated)."},
+    )
+    target_max_len: int = field(
+        default=256,
+        metadata={"help": "Maximum target sequence length. Sequences will be right padded (and possibly truncated)."},
+    )
+    name: str = field(
+        default='redpajama',
+        metadata={"help": "Which dataset to finetune on. See datamodule for options."}
+    )
+    cache_path: str = field(
+        default='./cache',
+        metadata={"help": "direction of cached dataset, leading to faster debug"}
+    )
+    eval_tasks: str = field(
+        default='',
+        metadata={"help": "evaluation tasks for lm eval, example:piqa,arc_easy,arc_challenge,hellaswag,winogrande"}
+    )
+    template: Optional[str] = field(
+        default=None,
+        metadata={"help": "Which template to use for constructing prompts in training and inference."}
+    )
+    train_on_prompt: Optional[bool] = field(
+        default=False,
+        metadata={"help": "Whether to disable the mask on the prompt or not."}
+    )
+    conv_temp: str = field(
+        default='llama-2',
+        metadata={"help": "Conversation template, only useful with deita datasets"}
+    )
+    mask_use: bool = field(
+        default=True, metadata={"help": "mask the loss to role in dialogue datas"}
+    )
+    dataset_format: Optional[str] = field(
+        default=None,
+        metadata={"help": "Which dataset format is used. [alpaca|redpajama]"}
+    )
+    overwrite_cache: bool = field(
+        default=False, metadata={"help": "Overwrite the cached training and evaluation sets"}
+    )
+    preprocessing_num_workers: Optional[int] = field(
+        default=32,
+        metadata={"help": "The number of processes to use for the preprocessing."},
+    )
+
+@dataclass
+class GenerationArguments:
+    # For more hyperparameters check:
+    # https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
+    # Length arguments
+    max_new_tokens: Optional[int] = field(
+        default=256,
+        metadata={"help": "Maximum number of new tokens to be generated in evaluation or prediction loops"
+                          "if predict_with_generate is set."}
+    )
+    min_new_tokens : Optional[int] = field(
+        default=None,
+        metadata={"help": "Minimum number of new tokens to generate."}
+    )
+
+    # Generation strategy
+    do_sample: Optional[bool] = field(default=False)
+    num_beams: Optional[int] = field(default=1)
+    num_beam_groups: Optional[int] = field(default=1)
+    penalty_alpha: Optional[float] = field(default=None)
+    use_cache: Optional[bool] = field(default=True)
+
+    # Hyperparameters for logit manipulation
+    temperature: Optional[float] = field(default=1.0)
+    top_k: Optional[int] = field(default=50)
+    top_p: Optional[float] = field(default=1.0)
+    typical_p: Optional[float] = field(default=1.0)
+    diversity_penalty: Optional[float] = field(default=0.0)
+    repetition_penalty: Optional[float] = field(default=1.0)
+    length_penalty: Optional[float] = field(default=1.0)
+    no_repeat_ngram_size: Optional[int] = field(default=0)
+
+
+
+@dataclass
+class TrainingArguments(transformers.Seq2SeqTrainingArguments):
+    should_save: Optional[bool] = field(
+        default=True,
+        metadata={"help": "Whether to save the preprocessed dataset."}
+    )
+    should_log: Optional[bool] = field(
+        default=True,
+        metadata={"help": "Whether to log the preprocessed dataset."}
+    )
+    train_on_source: Optional[bool] = field(
+        default=False,
+        metadata={"help": "Whether to train on the input in addition to the target text."}
+    )
+    do_mmlu_eval: Optional[bool] = field(
+        default=False,
+        metadata={"help": "Whether to run the MMLU evaluation."}
+    )
+    do_ppl_eval: Optional[bool] = field(
+        default=False,
+        metadata={"help": "Whether to run the PPL evaluation."}
+    )
+    pt_context_len: int = field(
+        default=1024,
+        metadata={"help": "language modeling length."}
+    )
+    full_finetune: bool = field(
+        default=False,
+        metadata={"help": "Finetune the entire model without adapters."}
+    )
+    wbits: int = field(
+        default=4,
+        metadata={"help": "How many bits to use."}
+    )
+    group_size: int = field(
+        default=64,
+        metadata={"help": "How many group size to use."}
+    )
+    max_memory_MB: int = field(
+        default=81000,
+        metadata={"help": "Free memory per gpu."}
+    )
+    report_to: str = field(
+        default='none',
+        metadata={"help": "To use wandb or something else for reporting."}
+    )
+    method: str = field(
+        default='efficientqat_e2e',
+        metadata={"help": "To use wandb or something else for reporting."}
+    )
+    output_dir: str = field(default='./output', metadata={"help": 'The output dir for logs and checkpoints'})
+    resume_from_checkpoint: str = field(default=None, metadata={"help": 'The output dir for logs and checkpoints'})
+    optim: str = field(default='paged_adamw_32bit', metadata={"help": 'The optimizer to be used'})
+    per_device_train_batch_size: int = field(default=1, metadata={"help": 'The training batch size per GPU. Increase for better speed.'})
+    gradient_accumulation_steps: int = field(default=16, metadata={"help": 'How many gradients to accumulate before to perform an optimizer step'})
+    max_steps: int = field(default=0, metadata={"help": 'How many optimizer update steps to take'})
+    weight_decay: float = field(default=0.01, metadata={"help": 'The L2 weight decay rate of AdamW'}) # use lora dropout instead for regularization if needed
+    learning_rate: float = field(default=2e-5, metadata={"help": 'The learnign rate'})
+    remove_unused_columns: bool = field(default=False, metadata={"help": 'Removed unused columns. Needed to make this codebase work.'})
+    max_grad_norm: float = field(default=0.3, metadata={"help": 'Gradient clipping max norm. This is tuned and works well for all models tested.'})
+    gradient_checkpointing: bool = field(default=True, metadata={"help": 'Use gradient checkpointing. You want to use this.'})
+    do_train: bool = field(default=True, metadata={"help": 'To train or not to train, that is the question?'})
+    lr_scheduler_type: str = field(default='cosine', metadata={"help": 'Learning rate schedule. Constant a bit better than cosine, and has advantage for analysis'})
+    warmup_ratio: float = field(default=0.03, metadata={"help": 'Fraction of steps to do a warmup for'})
+    logging_steps: int = field(default=10, metadata={"help": 'The frequency of update steps after which to log the loss'})
+    group_by_length: bool = field(default=False, metadata={"help": 'Group sequences into batches with same length. Saves memory and speeds up training considerably.'})
+    save_strategy: str = field(default='epoch', metadata={"help": 'When to save checkpoints'})
+    save_steps: int = field(default=250, metadata={"help": 'How often to save a model'})
+    save_total_limit: int = field(default=5, metadata={"help": 'How many checkpoints to save before the oldest is overwritten'})
+
 def get_accelerate_model(args, checkpoint_dir):
     if torch.cuda.is_available():
         n_gpus = torch.cuda.device_count()
@@ -81,7 +287,7 @@ def get_accelerate_model(args, checkpoint_dir):
     tokenizer.model_max_length = args.pt_context_len
     # import pdb;pdb.set_trace()
 
-    compute_dtype = (torch.float16 if args.bf16  else torch.float32)
+    compute_dtype = (torch.float16 if args.fp16 else (torch.bfloat16 if args.bf16 else torch.float32))
     if compute_dtype == torch.float16 and (is_ipex_available() and torch.xpu.is_available()):
         compute_dtype = torch.bfloat16
         print('Intel XPU does not support float16 yet, so switching to bfloat16')
@@ -89,7 +295,7 @@ def get_accelerate_model(args, checkpoint_dir):
     setattr(model, 'model_parallel', True)
     setattr(model, 'is_parallelizable', True)
 
-    model.config.torch_dtype = (torch.float32 if args.bf16 else torch.bfloat16)
+    model.config.torch_dtype=(torch.float32 if args.fp16 else (torch.bfloat16 if args.bf16 else torch.float32))
     # from peft import prepare_model_for_kbit_training
     # model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=args.gradient_checkpointing)
     model.cuda()
@@ -217,29 +423,39 @@ def get_last_checkpoint(checkpoint_dir):
 
 def train(config):
 
-    # model_args, data_args, training_args, generation_args, extra_args = \
-    #     hfparser.parse_args_into_dataclasses(return_remaining_strings=True)
-    # training_args.generation_config = transformers.GenerationConfig(**vars(generation_args))
-    # args = argparse.Namespace(
-    #     **vars(model_args), **vars(data_args), **vars(training_args)
-    # )
-    # args = to_dotdict(flatten_dict(config))
+    # 1️⃣ 生成 HF training args
+    hf_keys = inspect.signature(TrainingArguments.__init__).parameters
+    training_args_dict = {k: v for k, v in vars(config.quant).items() if k in hf_keys}
+    training_args = TrainingArguments(**training_args_dict)
 
-    # args = to_dotdict(flatten_dict(config))
-    model_args = config.base_model
-    data_args = config.data
-    training_args = config.quant
-    generation_args = config.generation_args
+    # 2️⃣ 生成 HF generation config
+    training_args.generation_config = transformers.GenerationConfig(**vars(config.generation_args))
 
-    training_args.generation_config = transformers.GenerationConfig(**vars(generation_args))
-    # args = argparse.Namespace(
-    #     **vars(model_args), **vars(data_args), **vars(training_args)
-    # )
-    args = flatten_dict(model_args)
-    args.update(flatten_dict(data_args))
-    args.update(flatten_dict(training_args))
-    args = to_dotdict(args)
+    # 3️⃣ 生成 model / data / generation dataclass
+    model_args = ModelArguments(**vars(config.base_model))
+    data_args = DataArguments(**vars(config.data))
+    generation_args = GenerationArguments(**vars(config.generation_args))
 
+    # 4️⃣ 最终 args
+    tmp_args = flatten_dict(config)
+    # 已有三类参数
+    base_dict = {
+        **vars(model_args),
+        **vars(data_args),
+        **vars(training_args),
+    }
+    extra_dict = {
+        k: v
+        for k, v in tmp_args.items()
+        if k not in base_dict
+    }
+
+    args = argparse.Namespace(
+        **base_dict,
+        **extra_dict
+    )
+
+    data_args.seed = training_args.seed
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     logger = create_logger(args.output_dir)
     logger.info(args)
@@ -254,7 +470,7 @@ def train(config):
                             maskfile_dir=args.maskfile_dir)
     model, tokenizer = get_accelerate_model(args, checkpoint_dir)
 
-    cache_dataloader = f'{data_args.cache_path}/e2e_dataloader_{data_args.name}_{model_args.type}_{training_args.pt_context_len}_{data_args.max_train_samples}.cache'
+    cache_dataloader = f'{data_args.cache_path}/e2e_dataloader_{data_args.name}_{model_args.type}_{args.pt_context_len}_{data_args.max_train_samples}.cache'
     if data_args.cache_path is not None and os.path.exists(cache_dataloader):
         print("Loading dataset from disk will ignore other data arguments.")
         from datasets import load_from_disk
