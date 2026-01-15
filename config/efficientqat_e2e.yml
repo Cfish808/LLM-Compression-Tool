@@ -8,86 +8,44 @@ base_model:
   use_auth_token: false
   torch_dtype: auto
 
-data:
-  name: redpajama
-  dataset_format: pt
-  conv_temp: llama-2
-  mask_use: true
-  overwrite_cache: false
-  preprocessing_num_workers: 32
-  cache_path: ./cache
-  template: null
-  train_on_prompt: false
-  source_max_len: 2048
-  target_max_len: 256
-  max_train_samples: 50000
-  max_eval_samples: 64
-
 quant:
   method: efficientqat_e2e
-  do_train: true
-  train_on_source: false
-  full_finetune: false
-  pt_context_len: 2048
-  wbits: 2
-  seed: 2
-  bf16: true
-  group_size: 128
-  should_save: true
-  learning_rate: 0.00005
-  weight_decay: 0.0
-  max_grad_norm: 0.5
-  should_log: true
-  per_device_train_batch_size: 8
-  gradient_accumulation_steps: 32
-  max_steps: 0
-  max_memory_MB: 80000
+  TrainingArguments:
+    pt_context_len: 2048
+    wbits: 2
+    seed: 2
+    bf16: true
+    group_size: 128
+    learning_rate: 0.00005
+    weight_decay: 0.0
+    max_grad_norm: 0.5
+    per_device_train_batch_size: 8
+    gradient_accumulation_steps: 32
+    max_memory_MB: 80000
+    logging_steps: 1
+    log_output_dir: ./output
+    save_strategy: steps
 
-  optim: paged_adamw_32bit
-  lr_scheduler_type: cosine
-  warmup_ratio: 0.03
+  DataArguments:
+    name: redpajama
+    dataset_format: pt
+    conv_temp: llama-2
+    cache_path: ./cache
+    source_max_len: 2048
+    max_train_samples: 50000
+    max_eval_samples: 64
 
-  gradient_checkpointing: true
-  remove_unused_columns: false
-  group_by_length: false
 
-  logging_steps: 1
-  report_to: none
-
-  output_dir: /ssd/yejinyu/EfficientQAT_1/output/e2e-qp-output/Llama-3-8b-w2g128_5w_mixed-precision_3mask_test_wikipedia_2.87bits
-  resume_from_checkpoint: null
-  save_strategy: steps
-  save_steps: 250
-  save_total_limit: 5
-
-generation_args:
-  max_new_tokens: 256
-  min_new_tokens: null
-
-  do_sample: false
-  num_beams: 1
-  num_beam_groups: 1
-  penalty_alpha: null
-  use_cache: true
-
-  temperature: 1.0
-  top_k: 50
-  top_p: 1.0
-  typical_p: 1.0
-  diversity_penalty: 0.0
-  repetition_penalty: 1.0
-  length_penalty: 1.0
-  no_repeat_ngram_size: 0
+  generation_args:
+    max_new_tokens: 256
 
 eval:
   tasks: []
-  datasets:
-    - wikitext2
-    - c4
+  datasets: [wikitext2,c4]
   seq_len: 2048
   batch_size: 4
   num_fewshot: 0
   nsamples: all
   device: cuda
 
-save: output/block_ap_models/Llama-2-13b-w2g128
+save: /ssd/yejinyu/EfficientQAT_1/output/e2e-qp-output/Llama-3-8b-w2g128_5w_mixed-precision_3mask_test_wikipedia_2.87bits

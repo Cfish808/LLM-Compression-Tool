@@ -16,7 +16,7 @@ from utils.load_model import BaseModel, get_accelerate_model
 from quantization.efficientqat.block_ap import block_ap, get_loaders
 
 def main(config):
-    if config.quant.method is not  "efficientqat_e2e":
+    if config.quant.method != "efficientqat_e2e":
         basemodel = BaseModel(config)
         tokenizer = basemodel.build_tokenizer()
         model = basemodel.build_model()
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     logger.add(sys.stdout, level='INFO')
     llmc_start_time = time.time()
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default="config/efficientqat_e2e_2.yml", type=str)
+    parser.add_argument('--config', default="config/efficientqat_e2e.yml", type=str)
     args = parser.parse_args()
     import os
 

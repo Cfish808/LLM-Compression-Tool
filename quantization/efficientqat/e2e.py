@@ -1,24 +1,17 @@
-# This file is modified from https://github.com/artidoro/qlora/blob/main/qlora.py
-import json
 import warnings
 from dataclasses import field, dataclass
 from os.path import exists, join, isdir
 from typing import Optional, Dict
-import numpy as np
 import importlib
 from packaging import version
 
 import torch
 import transformers
-import argparse
 from transformers import (
     set_seed,
-    Seq2SeqTrainer,
     LlamaTokenizer, Trainer, TrainerCallback, DataCollatorForLanguageModeling
 )
 
-from quantization.efficientqat.datautils_e2e import make_data_module
-from bitsandbytes.optim import AdamW
 import os
 
 from quantization.efficientqat.dsets import split_dataset, get_dataset, preprocess_dataset
@@ -27,8 +20,7 @@ from utils.efficientqat_utils import create_logger
 from quantization.efficientqat.int_linear_real import load_quantized_model, QuantLinear
 from pathlib import Path
 
-from utils.config_utils import flatten_dict, to_dotdict
-# from transformers import TrainingArguments
+from utils.config_utils import flatten_dict
 import inspect, argparse
 
 
@@ -162,40 +154,6 @@ class DataArguments:
     )
 
 @dataclass
-class GenerationArguments:
-    # For more hyperparameters check:
-    # https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
-    # Length arguments
-    max_new_tokens: Optional[int] = field(
-        default=256,
-        metadata={"help": "Maximum number of new tokens to be generated in evaluation or prediction loops"
-                          "if predict_with_generate is set."}
-    )
-    min_new_tokens : Optional[int] = field(
-        default=None,
-        metadata={"help": "Minimum number of new tokens to generate."}
-    )
-
-    # Generation strategy
-    do_sample: Optional[bool] = field(default=False)
-    num_beams: Optional[int] = field(default=1)
-    num_beam_groups: Optional[int] = field(default=1)
-    penalty_alpha: Optional[float] = field(default=None)
-    use_cache: Optional[bool] = field(default=True)
-
-    # Hyperparameters for logit manipulation
-    temperature: Optional[float] = field(default=1.0)
-    top_k: Optional[int] = field(default=50)
-    top_p: Optional[float] = field(default=1.0)
-    typical_p: Optional[float] = field(default=1.0)
-    diversity_penalty: Optional[float] = field(default=0.0)
-    repetition_penalty: Optional[float] = field(default=1.0)
-    length_penalty: Optional[float] = field(default=1.0)
-    no_repeat_ngram_size: Optional[int] = field(default=0)
-
-
-
-@dataclass
 class TrainingArguments(transformers.Seq2SeqTrainingArguments):
     should_save: Optional[bool] = field(
         default=True,
@@ -241,11 +199,7 @@ class TrainingArguments(transformers.Seq2SeqTrainingArguments):
         default='none',
         metadata={"help": "To use wandb or something else for reporting."}
     )
-    method: str = field(
-        default='efficientqat_e2e',
-        metadata={"help": "To use wandb or something else for reporting."}
-    )
-    output_dir: str = field(default='./output', metadata={"help": 'The output dir for logs and checkpoints'})
+    log_output_dir: str = field(default='./output', metadata={"help": 'The output dir for logs and checkpoints'})
     resume_from_checkpoint: str = field(default=None, metadata={"help": 'The output dir for logs and checkpoints'})
     optim: str = field(default='paged_adamw_32bit', metadata={"help": 'The optimizer to be used'})
     per_device_train_batch_size: int = field(default=1, metadata={"help": 'The training batch size per GPU. Increase for better speed.'})
@@ -423,22 +377,22 @@ def get_last_checkpoint(checkpoint_dir):
 
 def train(config):
 
-    # 1️⃣ 生成 HF training args
+    # 1️⃣ HF training args
+    config.quant.TrainingArguments.output_dir = config.quant.TrainingArguments.log_output_dir
     hf_keys = inspect.signature(TrainingArguments.__init__).parameters
-    training_args_dict = {k: v for k, v in vars(config.quant).items() if k in hf_keys}
+    training_args_dict = {k: v for k, v in vars(config.quant.TrainingArguments).items() if k in hf_keys}
     training_args = TrainingArguments(**training_args_dict)
 
-    # 2️⃣ 生成 HF generation config
-    training_args.generation_config = transformers.GenerationConfig(**vars(config.generation_args))
+    # 2️⃣ HF generation config
+    training_args.generation_config = transformers.GenerationConfig(**vars(config.quant.generation_args))
 
-    # 3️⃣ 生成 model / data / generation dataclass
+    # 3️⃣ model / data / generation dataclass
+
     model_args = ModelArguments(**vars(config.base_model))
-    data_args = DataArguments(**vars(config.data))
-    generation_args = GenerationArguments(**vars(config.generation_args))
+    data_args = DataArguments(**vars(config.quant.DataArguments))
 
-    # 4️⃣ 最终 args
+    # 4️⃣ tmp args
     tmp_args = flatten_dict(config)
-    # 已有三类参数
     base_dict = {
         **vars(model_args),
         **vars(data_args),
@@ -456,8 +410,8 @@ def train(config):
     )
 
     data_args.seed = training_args.seed
-    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    logger = create_logger(args.output_dir)
+    Path(args.save).mkdir(parents=True, exist_ok=True)
+    logger = create_logger(args.save)
     logger.info(args)
 
     # checkpoint_dir, completed_training = get_last_checkpoint(args.output_dir)
@@ -546,7 +500,7 @@ def train(config):
 
     all_metrics = {"run_name": args.run_name}
 
-    print(args.output_dir)
+    print(args.save)
     if args.do_train:
         logger.info("*** Train ***")
         train_result = trainer.train(args.resume_from_checkpoint)
