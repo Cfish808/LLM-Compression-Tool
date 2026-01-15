@@ -6,17 +6,22 @@ import torch
 import yaml
 from easydict import EasyDict
 from loguru import logger
+from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
+
+from utils.config_utils import to_dotdict,flatten_dict
 
 from eval.eval_by_category import run_evaluation
 from my_datasets import get_calibrate_loader,make_data_module,get_dataset_loader
 from quantization.layers import LinearQuantHub
 from quantization.llama_seq import llama_sequential, llama_omniquant
 from utils.load_model import BaseModel, get_accelerate_model, load_model_and_tokenizer
+from quantization.efficientqat.block_ap import block_ap, get_loaders
 
 
 def main(config):
     new_model = None
     if config.get("quant", False):
+
         if config.quant.method in ["qlora", "qalora","irlora"]:
             model,tokenizer = get_accelerate_model(config.base_model,config.quant.method)
             calibrate = make_data_module(tokenizer=tokenizer, args=config.quant.data)
@@ -30,6 +35,8 @@ def main(config):
             tokenizer = basemodel.build_tokenizer()
             model = basemodel.build_model()
             calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
+
+
         if config.quant.method == "omniquant":
             model = llama_omniquant(config.base_model.path, model, calibrate, config.quant, logger=logger)
             new_model = model
@@ -41,6 +48,23 @@ def main(config):
             from quantization.fbi_llm.fbi_train import train_fbi
             model = train_fbi(model, calibrate, config)
             new_model = model
+        elif config.quant.method == "efficientqat_block":
+            trainloader, valloader = get_loaders(
+                config.quant.data.name,
+                tokenizer,
+                config.quant.data.train_size,
+                config.quant.data.val_size,
+                seed=config.quant.data.seed,
+                seqlen=config.quant.data.training_seqlen,
+                model_type=config.base_model.type,
+            )
+            block_ap(
+                    model,
+                    config,
+                    trainloader,
+                    valloader,
+                    logger,
+                )
         elif config.quant.method in ["qlora", "qalora","irlora"]:
             from quantization.qlora.qlora import train
             model = train(model=model,tokenizer=tokenizer,calibrate_data=calibrate, args=config.quant.args)

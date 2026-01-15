@@ -1,6 +1,9 @@
+import json
 import random
 import logging
+from collections import defaultdict
 
+import nltk
 import numpy as np
 import torch
 
@@ -16,6 +19,50 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, Sequence, Union, List, Any
 from torch.nn.utils.rnn import pad_sequence
 
+def get_redpajama(tokenizer, train_size, val_size, seed, seqlen):
+    try:
+        loacal_dataset = "/cpfs01/user/chenmengzhao/huggingface/datasets/togethercomputer___red_pajama-data-1_t-sample"
+        traindata = load_dataset(loacal_dataset, split='train')
+    except:
+        traindata = load_dataset("togethercomputer/RedPajama-Data-1T-Sample", split='train')
+
+    random.seed(seed)
+    traindata = traindata.shuffle(seed=seed)
+    trainloader = []
+
+    val_sample_ratio = 0.9
+    print("**********start the trainloader.************")
+
+    for _ in range(train_size):
+        while True:
+            i = random.randint(0, int(len(traindata) * val_sample_ratio) - 1)
+            trainenc = tokenizer(traindata[i]['text'], return_tensors='pt')
+            if trainenc.input_ids.shape[1] >= seqlen + 1:
+                break
+        start = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+        end = start + seqlen
+        inp = trainenc.input_ids[:, start:end]
+        tar = inp.clone()
+        tar[:, :-1] = -100
+
+        trainloader.append((inp, tar))
+
+    print("**********finish the trainloader.************")
+
+    valloader = []
+    for _ in range(val_size):
+        while True:
+            i = random.randint(int(len(traindata) * val_sample_ratio), len(traindata) - 1)
+            trainenc = tokenizer(traindata[i]['text'], return_tensors='pt')
+            if trainenc.input_ids.shape[1] >= seqlen + 1:
+                break
+        i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+        j = i + seqlen
+        inp = trainenc.input_ids[:, i:j]
+        tar = inp.clone()
+        tar[:, :-1] = -100
+        valloader.append((inp, tar))
+    return trainloader, valloader
 
 def get_wikitext2(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwargs):
     if split == 'train':
@@ -67,7 +114,7 @@ def get_c4(tokenizer, split='validation', nsamples=128, seqlen=2048, seed=42, **
 
     if split == 'validation':
         logging.info("get_c4_validation")
-        valdata = load_dataset("./c4_local",
+        valdata = load_dataset("allenai/c4",
                             # "allenai/c4",
                                data_files={'validation': 'en/c4-validation.00000-of-00008.json.gz'},
                                split='validation')

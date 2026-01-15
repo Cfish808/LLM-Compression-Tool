@@ -146,7 +146,7 @@ class BaseModel():
                 config=self.model_config,
                 device_map=self.device_map,
                 trust_remote_code=True,
-                torch_dtype=self.torch_dtype,
+                # torch_dtype=self.torch_dtype,
                 low_cpu_mem_usage=True,
             )
         self.model.eval()
