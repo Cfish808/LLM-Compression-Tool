@@ -30,6 +30,8 @@ def main(config):
             model_args, data_args, training_args, finetuning_args = get_train_args(config.quant.args)
             model,tokenizer = load_model_and_tokenizer(model_args,finetuning_args,training_args.do_train)
             calibrate = get_dataset_loader(tokenizer=tokenizer, data_args=data_args, training_args=training_args)
+        elif config.quant.method == "efficientqat_e2e":
+            pass
         else:
             basemodel = BaseModel(config)
             tokenizer = basemodel.build_tokenizer()
@@ -65,6 +67,9 @@ def main(config):
                     valloader,
                     logger,
                 )
+        elif config.quant.method == "efficientqat_e2e":
+            from quantization.efficientqat.e2e import train
+            train(config)
         elif config.quant.method in ["qlora", "qalora","irlora"]:
             from quantization.qlora.qlora import train
             model = train(model=model,tokenizer=tokenizer,calibrate_data=calibrate, args=config.quant.args)
