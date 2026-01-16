@@ -14,9 +14,9 @@ from .load_boss import get_calibrate_boss
 
 import os
 
-from datasets import load_dataset, Dataset
+from datasets import load_dataset, concatenate_datasets, interleave_datasets
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Sequence
+from typing import Optional, Dict, Sequence, Union, List, Any
 from torch.nn.utils.rnn import pad_sequence
 
 def get_redpajama(tokenizer, train_size, val_size, seed, seqlen):
@@ -388,3 +388,149 @@ def local_dataset(dataset_name):
 
     split_dataset = full_dataset.train_test_split(test_size=0.1)
     return split_dataset
+
+def get_dataset(data_args):
+    EXT2TYPE = {"csv": "csv","json": "json","jsonl": "json","txt": "text"}
+    max_samples = data_args.max_samples
+    all_datasets: List[Union["Dataset", "IterableDataset"]] = [] # support multiple datasets
+    for dataset_attr in data_args.dataset_list:
+        print("Loading dataset {}...".format(dataset_attr))
+        if dataset_attr.load_from == "hf_hub":
+            data_path = dataset_attr.dataset_name
+            data_files = None
+        elif dataset_attr.load_from == "script":
+            data_path = os.path.join(data_args.dataset_dir, dataset_attr.dataset_name)
+            data_files = None
+        elif dataset_attr.load_from == "file":
+            data_path = None
+            data_files: List[str] = []
+
+            if os.path.isdir(os.path.join(data_args.dataset_dir, dataset_attr.dataset_name)): # directory
+                for file_name in os.listdir(os.path.join(data_args.dataset_dir, dataset_attr.dataset_name)):
+                    data_files.append(os.path.join(data_args.dataset_dir, dataset_attr.dataset_name, file_name))
+                    if data_path is None:
+                        data_path = EXT2TYPE.get(file_name.split(".")[-1], None)
+                    else:
+                        assert data_path == EXT2TYPE.get(file_name.split(".")[-1], None), "file type does not match."
+            elif os.path.isfile(os.path.join(data_args.dataset_dir, dataset_attr.dataset_name)): # single file
+                data_files.append(os.path.join(data_args.dataset_dir, dataset_attr.dataset_name))
+                data_path = EXT2TYPE.get(dataset_attr.dataset_name.split(".")[-1], None)
+            else:
+                raise ValueError("File not found.")
+
+            assert data_path, "File extension must be txt, csv, json or jsonl."
+        else:
+            raise NotImplementedError
+
+        dataset = load_dataset(
+            data_path,
+            data_files=data_files,
+            split=data_args.split,
+            streaming=data_args.streaming
+        )
+
+        if max_samples is not None:
+            max_samples_temp = min(len(dataset), max_samples)
+            dataset = dataset.select(range(max_samples_temp))
+
+        # TODO: adapt to the sharegpt format
+
+        for column_name in ["prompt", "query", "response", "history"]: # align datasets
+            if getattr(dataset_attr, column_name) and getattr(dataset_attr, column_name) != column_name:
+                dataset = dataset.rename_column(getattr(dataset_attr, column_name), column_name)
+
+        if dataset_attr.system_prompt: # add system prompt
+            if data_args.streaming:
+                dataset = dataset.map(lambda _: {"system": dataset_attr.system_prompt})
+            else:
+                dataset = dataset.add_column("system", [dataset_attr.system_prompt] * len(dataset))
+
+        all_datasets.append(dataset)
+
+    if len(data_args.dataset_list) == 1:
+        return all_datasets[0]
+    elif data_args.mix_strategy == "concat":
+        if data_args.streaming:
+            print("The samples between different datasets will not be mixed in streaming mode.")
+        return concatenate_datasets(all_datasets)
+    elif data_args.mix_strategy.startswith("interleave"):
+        if not data_args.streaming:
+            print("We recommend using `mix_strategy=concat` in non-streaming mode.")
+        return interleave_datasets(
+            datasets=all_datasets,
+            probabilities=data_args.interleave_probs,
+            seed=data_args.seed,
+            stopping_strategy="first_exhausted" if data_args.mix_strategy.endswith("under") else "all_exhausted"
+        )
+    else:
+        raise ValueError("Unknown mixing strategy.")
+
+def preprocess_dataset(dataset,tokenizer,data_args,training_args):
+    def preprocess_pretrain_dataset(examples: Dict[str, List[Any]]) -> Dict[str, Any]:
+        # build grouped texts with format `X1 X2 X3 ...`
+        import tiktoken
+        if isinstance(getattr(tokenizer, "tokenizer", None), tiktoken.Encoding): # for tiktoken tokenizer (Qwen)
+            kwargs = dict(allowed_special="all")
+        else:
+            kwargs = dict(add_special_tokens=True)
+
+        if hasattr(tokenizer, "add_eos_token"): # for LLaMA tokenizer
+            setattr(tokenizer, "add_eos_token", True)
+
+        tokenized_examples = tokenizer(examples["prompt"], **kwargs)
+        from itertools import chain
+        concatenated_examples = {k: list(chain(*tokenized_examples[k])) for k in tokenized_examples.keys()}
+        total_length = len(concatenated_examples[list(concatenated_examples.keys())[0]])
+        block_size = data_args.cutoff_len
+        # we drop the small remainder, and if the total_length < block_size, we exclude this batch
+        total_length = (total_length // block_size) * block_size
+        # split by chunks of cutoff_len
+        result = {
+            k: [t[i: i + block_size] for i in range(0, total_length, block_size)]
+            for k, t in concatenated_examples.items()
+        }
+        return result
+        
+    def print_unsupervised_dataset_example(example):
+        print("input_ids:\n{}".format(example["input_ids"]))
+        print("inputs:\n{}".format(tokenizer.decode(example["input_ids"], skip_special_tokens=False)))
+    from quantization.onebit.extras import get_logger, IGNORE_INDEX, get_template_and_fix_tokenizer
+    template = get_template_and_fix_tokenizer(data_args.template, tokenizer)
+    preprocess_func = preprocess_pretrain_dataset
+    print_function = print_unsupervised_dataset_example
+    with training_args.main_process_first(desc="dataset map pre-processing"):
+        column_names = list(next(iter(dataset)).keys())
+        kwargs = {}
+        if not data_args.streaming:
+            kwargs = dict(
+                num_proc=data_args.preprocessing_num_workers,
+                load_from_cache_file=not data_args.overwrite_cache,
+                desc="Running tokenizer on dataset"
+            )
+
+        dataset = dataset.map(
+            preprocess_func,
+            batched=True,            
+            remove_columns=column_names,
+            **kwargs
+        )
+
+        if data_args.cache_path is not None and not os.path.exists(data_args.cache_path):
+            if training_args.should_save:
+                dataset.save_to_disk(data_args.cache_path)
+            raise SystemExit("Dataset saved, rerun this script with the same `--cache_file`.")
+
+        if training_args.should_log:
+            try:
+                print_function(next(iter(dataset)))
+            except StopIteration:
+                raise RuntimeError("Empty dataset!")
+
+        return dataset
+   
+
+def get_dataset_loader(tokenizer, data_args, training_args):
+    dataset = get_dataset(data_args)
+    dataset = preprocess_dataset(dataset, tokenizer, data_args, training_args)
+    return dataset
+

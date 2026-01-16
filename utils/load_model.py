@@ -19,7 +19,7 @@ import torch
 import transformers
 from torch import nn
 from tqdm import tqdm
-from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer,BitsAndBytesConfig,LlamaTokenizer,LlamaTokenizerFast
+from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer,BitsAndBytesConfig,LlamaTokenizer,LlamaTokenizerFast,PretrainedConfig,PreTrainedModel,PreTrainedTokenizerBase
 from transformers.modeling_utils import no_init_weights
 from transformers.utils import ContextManagers, cached_file
 
@@ -511,4 +511,175 @@ def get_accelerate_model(args,method=''):
             if hasattr(module, 'weight'):
                 if args.bf16 and module.weight.dtype == torch.float32:
                     module = module.to(torch.bfloat16)
+    return model, tokenizer
+
+def prepare_model_for_training(
+    model: "PreTrainedModel",
+    use_gradient_checkpointing: Optional[bool] = True,
+) -> "PreTrainedModel":
+    r"""
+    Includes:
+        (1) cast the layernorm in fp32
+        (2) make output embedding layer require grads
+        (3) upcast the lm_head to fp32
+    Inspired by: https://github.com/huggingface/peft/blob/v0.2.0/src/peft/utils/other.py#L33
+    """
+    if use_gradient_checkpointing:
+        if hasattr(model, "enable_input_require_grads"):
+            model.enable_input_require_grads()
+        else:
+            def make_inputs_require_grad(module: torch.nn.Module, input: torch.Tensor, output: torch.Tensor):
+                output.requires_grad_(True)
+            model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
+
+        model.gradient_checkpointing_enable()
+        model.config.use_cache = False # turn off when gradient checkpointing is enabled
+        print("Gradient checkpointing enabled.")
+    return model
+
+
+def load_model_and_tokenizer(model_args,finetuning_args,is_trainable: Optional[bool] = False):
+    r"""
+    Loads pretrained model and tokenizer.
+    Support both training and inference.
+    """
+    # model_args.model_name_or_path = model_args.path
+    # is_trainable = True if model_args.do_train else False
+    config_kwargs = {
+        "trust_remote_code": True,
+        "cache_dir": model_args.cache_dir,
+        "revision": model_args.model_revision,
+        "use_auth_token": True if model_args.use_auth_token else None,
+    }
+    
+    from transformers import LlamaTokenizer
+    tokenizer = LlamaTokenizer.from_pretrained(
+        model_args.model_name_or_path,
+        use_fast=model_args.use_fast_tokenizer,
+        split_special_tokens=model_args.split_special_tokens,
+        padding_side="right",
+        **config_kwargs
+    )
+
+    model_to_load = model_args.model_name_or_path
+    config = AutoConfig.from_pretrained(model_to_load, **config_kwargs)
+
+    # Fix tokenizer (for ChatGLM2)
+    if getattr(config, "model_type", None) == "chatglm":
+        tokenizer._pad = MethodType(PreTrainedTokenizerBase._pad, tokenizer)
+
+    # Set model dtype
+    if model_args.compute_dtype is not None: # for training
+        setattr(config, "torch_dtype", model_args.compute_dtype)
+    else: # for evaluation, priority: bf16 > fp16 > fp32
+        from quantization.onebit.extras import infer_optim_dtype
+        model_args.compute_dtype = infer_optim_dtype(model_dtype=getattr(config, "torch_dtype", None))
+
+    # Fix config (for Qwen)
+    if getattr(config, "model_type", None) == "qwen":
+        for dtype_name, dtype in [("fp16", torch.float16), ("bf16", torch.bfloat16), ("fp32", torch.float32)]:
+            setattr(config, dtype_name, getattr(config, "torch_dtype", None) == dtype)
+
+    # Set RoPE scaling
+    if model_args.rope_scaling is not None:
+        if hasattr(config, "use_dynamic_ntk"): # for Qwen models
+            if is_trainable:
+                print("Qwen model does not support RoPE scaling in training.")
+            else:
+                setattr(config, "use_dynamic_ntk", True)
+                setattr(config, "use_logn_attn", True)
+                print("Using dynamic NTK scaling.")
+
+        elif hasattr(config, "rope_scaling"): # for LLaMA and Falcon models
+            if is_trainable:
+                if model_args.rope_scaling == "dynamic":
+                    print(
+                        "Dynamic NTK may not work well with fine-tuning. "
+                        "See: https://github.com/huggingface/transformers/pull/24653"
+                    )
+
+                current_max_length = getattr(config, "max_position_embeddings", None)
+                if current_max_length and model_args.model_max_length > current_max_length:
+                    scaling_factor = float(math.ceil(model_args.model_max_length / current_max_length))
+                else:
+                    print("Input length is smaller than max length. Consider increase input length.")
+                    scaling_factor = 1.0
+            else:
+                scaling_factor = 2.0
+
+            setattr(config, "rope_scaling", {"type": model_args.rope_scaling, "factor": scaling_factor})
+            print("Using {} scaling strategy and setting scaling factor to {}".format(
+                model_args.rope_scaling, scaling_factor
+            ))
+
+        else:
+            print("Current model does not support RoPE scaling.")
+
+   
+    # from Xu Yuzhuang
+    from transformers import BitLlamaForCausalLM
+    try:
+        from transformers.integrations import is_deepspeed_zero3_enabled
+    except ImportError: # https://github.com/huggingface/transformers/releases/tag/v4.33.1
+        from transformers.deepspeed import is_deepspeed_zero3_enabled
+    model = BitLlamaForCausalLM.from_pretrained(
+        model_to_load,
+        config=config,
+        torch_dtype=model_args.compute_dtype,
+        low_cpu_mem_usage=(not is_deepspeed_zero3_enabled()),
+        **config_kwargs
+    )
+    
+    assert model_args.teacher_model_name_or_path is not None, "teacher model path is None!"
+    teacher_config = AutoConfig.from_pretrained(model_args.teacher_model_name_or_path, **config_kwargs)
+    model.teacher_model = AutoModelForCausalLM.from_pretrained(
+        model_args.teacher_model_name_or_path,
+        config=teacher_config,
+        torch_dtype=torch.float16,
+        **config_kwargs
+    )
+
+    # Disable custom generate method (for Qwen and Baichuan2)
+    if isinstance(model, PreTrainedModel) and "GenerationMixin" not in str(model.generate.__func__):
+        model.generate = MethodType(PreTrainedModel.generate, model)
+
+    # Fix LM head (for ChatGLM2)
+    if getattr(config, "model_type", None) == "chatglm":
+        setattr(model, "lm_head", model.transformer.output_layer)
+
+    # Register auto class to save the custom code files.
+    if isinstance(config, PretrainedConfig) and "AutoConfig" in getattr(config, "auto_map", {}):
+        config.__class__.register_for_auto_class()
+    if isinstance(model, PreTrainedModel) and "AutoModelForCausalLM" in getattr(config, "auto_map", {}):
+        model.__class__.register_for_auto_class()
+    if isinstance(tokenizer, PreTrainedTokenizerBase) and "AutoTokenizer" in tokenizer.init_kwargs.get("auto_map", {}):
+        tokenizer.__class__.register_for_auto_class()
+
+    # Initialize adapters
+    model = prepare_model_for_training(model=model) if is_trainable else model
+    if finetuning_args.finetuning_type == "full" and is_trainable:
+        model = model.float()
+    model = model.train() if is_trainable else model.eval()
+    
+    model.kd_loss_scale = model_args.kd_loss_scale
+    model.kd_alpha = model_args.kd_alpha
+    model.kd_beta = model_args.kd_beta
+    model.kd_gamma = model_args.kd_gamma
+    # model.teacher_model = model.teacher_model.eval()
+    for param in model.teacher_model.parameters():
+        param.requires_grad = False
+
+    # Prepare model for inference
+    if not is_trainable:
+        model.requires_grad_(False) # fix all model params
+        model = model.to(model_args.compute_dtype) if model_args.quantization_bit is None else model
+    from quantization.onebit.extras import count_parameters
+    trainable_params, all_param = count_parameters(model)
+    print("trainable params: {:d} || all params: {:d} || trainable%: {:.4f}".format(
+        trainable_params, all_param, 100 * trainable_params / all_param
+    ))
+
+    if not is_trainable:
+        print("This IS expected that the trainable params is 0 if you are using model for inference only.")
+
     return model, tokenizer
