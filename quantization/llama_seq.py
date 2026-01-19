@@ -11,6 +11,9 @@ from quantization.rtn.RTNQuantizer import LinearRTNQuantizer
 from quantization.omniquant.generate_act_scale_shift import generate_act_scale_shift
 from quantization.omniquant.OmniQuantizer import omni_quantize
 from quantization.Quip.QuipQuantizer import LinearQuipQuantizer
+from quantization.owq.OWQQuantizer import LinearOWQQuantizer
+from quantization.BiLLM.BILLMQuantizer import LinearBiLLMQuantizer
+from quantization.spqr.SPQRQuantizer import LinearSPQRQuantizer
 from quantization.layers import LinearQuantHub
 
 from utils.load_model import find_layers
@@ -102,6 +105,12 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                         layer.register_quantizer(LinearRTNQuantizer(layer,  device=device, **kwargs["weight"]))
                     elif method == 'quip':
                         layer.register_quantizer(LinearQuipQuantizer(layer,  device=device, **kwargs["weight"]))
+                    elif method =='owq':
+                        layer.register_quantizer(LinearOWQQuantizer(layer, device=device, **kwargs["weight"]))
+                    elif method =='spqr':
+                        layer.register_quantizer(LinearSPQRQuantizer(layer, device=device, **kwargs["weight"]))
+                    elif method =='billm':
+                        layer.register_quantizer(LinearBiLLMQuantizer(layer, device=device, **kwargs["weight"]))
                     else:
                         raise RuntimeError(f'No {method} Quantizer!')
                     layer.prepare_hook()
