@@ -1,0 +1,45 @@
+base_model:
+  type: Llama
+  path: /netcache/huggingface/llama2_7b
+  torch_dtype: auto
+  max_memory: 80GiB
+  resume_quant: null
+quant:
+  method: efficientqat_block
+  quant_seq: true
+  real_quant: false
+  log_output_dir: ./log/
+  cache_dir: ./cache
+  mixed_precision: false
+  maskfile_dir: ./salient_columns.json
+  off_load_to_disk: false
+  quantize:
+    wbits: 2
+    group_size: 128
+    quant_lr: 0.0001
+    weight_lr: 0.00001
+    min_lr_factor: 20
+    clip_grad: 0.3
+    wd: 0
+    epochs: 2
+    batch_size: 2
+    early_stop: 0
+    kd_loss_scale: 0.0
+  data:
+    name: redpajama
+    train_size: 4096
+    val_size: 64
+    training_seqlen: 2048
+    pos_entropy: false
+    off_load_to_disk: false
+    seed: 2
+eval:
+  tasks: []
+  datasets: [ wikitext2, c4 ]
+  seq_len: 2048
+  batch_size: 4
+  num_fewshot: 0
+  nsamples: all
+  device: cuda
+
+save: output/block_ap_models/Llama-2-13b-w2g128
