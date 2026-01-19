@@ -1,17 +1,10 @@
 import argparse
 import json
-import pdb
 import sys
 import time
-from xxlimited_35 import new
-
-import torch
 import yaml
 from easydict import EasyDict
 from loguru import logger
-from sympy.codegen.ast import none
-from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
-from utils.config_utils import to_dotdict,flatten_dict
 from eval.eval_by_category import run_evaluation
 from my_datasets import get_calibrate_loader,make_data_module
 from quantization.layers import LinearQuantHub
@@ -19,13 +12,18 @@ from quantization.llama_seq import llama_sequential, llama_omniquant
 from utils.load_model import BaseModel, get_accelerate_model
 from quantization.efficientqat.block_ap import block_ap, get_loaders
 
+
+def get_model(config):
+    basemodel = BaseModel(config)
+    tokenizer = basemodel.build_tokenizer()
+    model = basemodel.build_model()
+    return model, tokenizer , basemodel
+
+
 def main(config):
     new_model = None
-    if "quant" not in config.keys() or config.quant.method != "efficientqat_e2e":
-        basemodel = BaseModel(config)
-        tokenizer = basemodel.build_tokenizer()
-        model = basemodel.build_model()
-        new_model = model
+    if "quant" in config or config.quant.method != "efficientqat_e2e":
+        model, tokenizer, basemodel = get_model(config)
     else:
         model = None
         tokenizer = None
@@ -79,7 +77,7 @@ def main(config):
             logger.info(f'model: {model}')
             logger.info(f'tokenizer: {tokenizer}')
 
-        if config.get("save", False) and config.get("quant", False):
+        if config.get("save", False):
             model = basemodel.replace_module(new_model, module_type=LinearQuantHub, new_module_type="", display=True)
             gen_config = model.generation_config
             gen_config.do_sample = True
@@ -87,6 +85,9 @@ def main(config):
             tokenizer.save_pretrained(config.get("save"))
 
     if config.get("eval", False):
+        if new_model is None:
+            config.base_model.path = config.save
+            new_model, tokenizer, _ = get_model(config)
         eval_config = config.eval
         model = new_model.to(eval_config.get('device', "cpu"))
         run_evaluation(model, tokenizer, **eval_config)
