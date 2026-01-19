@@ -5,3 +5,4 @@ quantization/GPTQ.py
 benchmark
 utils/benchmark.py
 .idea
+/c4_local/

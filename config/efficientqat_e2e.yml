@@ -1,8 +1,5 @@
 base_model:
   path: /ssd/yejinyu/EfficientQAT_1/output/block_ap_models/Llama-3-8b-w2g128_4096_mixed-precision_3mask_test_wikipedia_2.87bits
-  real_quant: false
-  mixed_precision: true
-  maskfile_dir: /home/yejinyu/EfficientQAT_1/wikipedia_salient_columns/wikipedia_salient_columns_llama3_8b_up_lim10.json
   type: llama3
   trust_remote_code: false
   use_auth_token: false
@@ -10,6 +7,9 @@ base_model:
 
 quant:
   method: efficientqat_e2e
+  real_quant: false
+  mixed_precision: true
+  maskfile_dir: /home/yejinyu/EfficientQAT_1/wikipedia_salient_columns/wikipedia_salient_columns_llama3_8b_up_lim10.json
   TrainingArguments:
     pt_context_len: 2048
     wbits: 2
