@@ -35,7 +35,6 @@ quant:
     max_train_samples: 50000
     max_eval_samples: 64
 
-
   generation_args:
     max_new_tokens: 256
 

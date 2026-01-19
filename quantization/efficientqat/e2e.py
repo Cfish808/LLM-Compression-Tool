@@ -510,3 +510,4 @@ def train(config):
         trainer.save_state()
         all_metrics.update(metrics)
 
+    return model, tokenizer
