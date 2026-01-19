@@ -14,6 +14,7 @@ from quantization.layers import LinearQuantHub
 from quantization.llama_seq import llama_sequential, llama_omniquant
 from utils.load_model import BaseModel, get_accelerate_model, load_model_and_tokenizer
 from quantization.efficientqat.block_ap import block_ap, get_loaders
+from quantization.efficientqat.int_linear_real import trans_e2e2llama_model, trans_blockwise2llama_model
 
 def main(config):
     new_model = None
@@ -82,7 +83,14 @@ def main(config):
             logger.info(f'tokenizer: {tokenizer}')
 
     if config.get("save", False) and config.get("quant", False):
-        model = basemodel.replace_module(new_model, module_type=LinearQuantHub, new_module_type="", display=True)
+        if config.quant.method == "efficientqat_e2e":
+            model = trans_e2e2llama_model(model, mixed_precision=config.quant.mixed_precision, maskfile_dir=config.quant.maskfile_dir)
+        elif config.quant.method == "efficientqat_block":
+            model = trans_blockwise2llama_model(model)
+        # config.quant.method in ["gptq"]:
+        else:
+            model = basemodel.replace_module(new_model, module_type=LinearQuantHub, new_module_type="", display=True)
+            
         gen_config = model.generation_config
         gen_config.do_sample = True
         model.save_pretrained(args.save)
