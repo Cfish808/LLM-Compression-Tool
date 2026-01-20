@@ -90,7 +90,7 @@ def main(config):
 
     if config.get("save", False) and config.get("quant", False):
         if config.quant.method == "efficientqat_e2e":
-            model = trans_e2e2llama_model(model, mixed_precision=config.quant.mixed_precision, maskfile_dir=config.quant.maskfile_dir)
+            model = trans_e2e2llama_model(new_model, mixed_precision=config.quant.mixed_precision, maskfile_dir=config.quant.maskfile_dir)
         elif config.quant.method == "efficientqat_block":
             model = trans_blockwise2llama_model(model)
         # config.quant.method in ["gptq"]:
