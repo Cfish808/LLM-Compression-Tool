@@ -122,14 +122,14 @@ if __name__ == '__main__':
     logger.add(sys.stdout, level='INFO')
     llmc_start_time = time.time()
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default="/home/xzy/LLM-Compression-Tool/config/onebit.yml", type=str)
+    parser.add_argument('--config', default="config/onebit.yml", type=str)
     parser.add_argument("--local_rank", type=int, default=-1, help="Local rank for distributed training")
     args = parser.parse_args()
     import os
 
     # 设置 HuggingFace 的缓存和镜像源
-    os.environ['HF_HOME'] = '/home/yejinyu/huggingface_3_copy'
-    os.environ['HF_DATASETS_CACHE'] = '/home/yejinyu/huggingface_3_copy'
+    os.environ['HF_HOME'] = './.huggingface'
+    os.environ['HF_DATASETS_CACHE'] = './.huggingface'
     os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 
