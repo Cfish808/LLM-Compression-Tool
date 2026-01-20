@@ -64,16 +64,16 @@ class ModelArguments:
         default="",
         metadata={"help": "path of the quantization model by Block-AP."}
     )
-    real_quant: bool = field(
-        default=True, metadata={"help": "reload the quant model or not."}
-    )
-    mixed_precision: bool = field(
-        default=False, metadata={"help": "reload the quant model or not."}
-    )
-    maskfile_dir: Optional[str] = field(
-        default="./salient_columns.json",
-        metadata={"help": "direction of mask file"}
-    )
+    # real_quant: bool = field(
+    #     default=True, metadata={"help": "reload the quant model or not."}
+    # )
+    # mixed_precision: bool = field(
+    #     default=False, metadata={"help": "reload the quant model or not."}
+    # )
+    # maskfile_dir: Optional[str] = field(
+    #     default="./salient_columns.json",
+    #     metadata={"help": "direction of mask file"}
+    # )
     type: Optional[str] = field(
         default="llama-2",
         metadata={"help": "for the saving of dataset cache for faster experiments"}
@@ -459,23 +459,9 @@ def train(config):
         elif isinstance(module, QuantLinear_fake) and not 'head' in name:
             module.scales.requires_grad = True
             module.use_weight_quant = True
-    # if not args.mixed_precision: optimizer_grouped_parameters.append({'params': [p for n, p in model.named_parameters() if 'scale' in n], 'weight_decay': 0.0, 'lr': args.learning_rate})
-    # else:
-    #     optimizer_grouped_parameters.append(
-    #         {'params': [p for n, p in model.named_parameters() if 'scale' in n], 'weight_decay': 0.0,
-    #          'lr': args.learning_rate})
-    # optimizer = AdamW(optimizer_grouped_parameters)
 
-    # trainer = Seq2SeqTrainer(
-    #     model=model,
-    #     tokenizer=tokenizer,
-    #     args=training_args,
-    #     optimizers=(optimizer, None),
-    #     **{k:v for k,v in data_module.items() if k != 'predict_dataset'},
-    # )
     optimizer_grouped_parameters = []
-    # optimizer_grouped_parameters.append({'params': [p for n, p in model.named_parameters() if 'mask_weight' in n], 'weight_decay': 0.01, 'lr': args.learning_rate})
-    # optimizer = AdamW(optimizer_grouped_parameters)
+
     trainer = Trainer(
         model=model,
         args=training_args,

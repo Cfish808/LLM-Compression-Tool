@@ -14,6 +14,15 @@ from quantization.layers import LinearQuantHub
 from quantization.llama_seq import llama_sequential, llama_omniquant
 from utils.load_model import BaseModel, get_accelerate_model, load_model_and_tokenizer
 from quantization.efficientqat.block_ap import block_ap, get_loaders
+from quantization.efficientqat.int_linear_real import trans_e2e2llama_model, trans_blockwise2llama_model
+
+
+def get_model(config):
+    basemodel = BaseModel(config)
+    tokenizer = basemodel.build_tokenizer()
+    model = basemodel.build_model()
+    return model, tokenizer , basemodel
+
 
 def main(config):
     new_model = None
@@ -30,9 +39,7 @@ def main(config):
         elif config.quant.method == "efficientqat_e2e":
             pass
         else:
-            basemodel = BaseModel(config)
-            tokenizer = basemodel.build_tokenizer()
-            model = basemodel.build_model()
+            model, tokenizer, basemodel = get_model(config)
             calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
 
 
@@ -58,15 +65,15 @@ def main(config):
                 model_type=config.base_model.type,
             )
             block_ap(
-                    model,
-                    config,
-                    trainloader,
-                    valloader,
-                    logger,
-                )
+                model,
+                config,
+                trainloader,
+                valloader,
+                logger,
+            )
         elif config.quant.method == "efficientqat_e2e":
             from quantization.efficientqat.e2e import train
-            train(config)
+            new_model,tokenizer = train(config)
         elif config.quant.method in ["qlora", "qalora","irlora"]:
             from quantization.qlora.qlora import train
             model = train(model=model,tokenizer=tokenizer,calibrate_data=calibrate, args=config.quant.args)
@@ -82,15 +89,25 @@ def main(config):
             logger.info(f'tokenizer: {tokenizer}')
 
     if config.get("save", False) and config.get("quant", False):
-        model = basemodel.replace_module(new_model, module_type=LinearQuantHub, new_module_type="", display=True)
+        if config.quant.method == "efficientqat_e2e":
+            model = trans_e2e2llama_model(model, mixed_precision=config.quant.mixed_precision, maskfile_dir=config.quant.maskfile_dir)
+        elif config.quant.method == "efficientqat_block":
+            model = trans_blockwise2llama_model(model)
+        # config.quant.method in ["gptq"]:
+        else:
+            model = basemodel.replace_module(new_model, module_type=LinearQuantHub, new_module_type="", display=True)
+
         gen_config = model.generation_config
         gen_config.do_sample = True
         model.save_pretrained(args.save)
         tokenizer.save_pretrained(args.save)
 
     if config.get("eval", False):
+        if new_model is None:
+            config.base_model.path = config.save
+            new_model, tokenizer, _ = get_model(config)
         eval_config = config.eval
-        model = model.to(eval_config.get('device', "cpu"))
+        model = new_model.to(eval_config.get('device', "cpu"))
         run_evaluation(model, tokenizer, **eval_config)
 
 
@@ -105,14 +122,14 @@ if __name__ == '__main__':
     logger.add(sys.stdout, level='INFO')
     llmc_start_time = time.time()
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default="/home/xzy/LLM-Compression-Tool/config/onebit.yml", type=str)
+    parser.add_argument('--config', default="config/onebit.yml", type=str)
     parser.add_argument("--local_rank", type=int, default=-1, help="Local rank for distributed training")
     args = parser.parse_args()
     import os
 
     # 设置 HuggingFace 的缓存和镜像源
-    os.environ['HF_HOME'] = '/home/yejinyu/huggingface_3_copy'
-    os.environ['HF_DATASETS_CACHE'] = '/home/yejinyu/huggingface_3_copy'
+    os.environ['HF_HOME'] = './.huggingface'
+    os.environ['HF_DATASETS_CACHE'] = './.huggingface'
     os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 

@@ -577,8 +577,12 @@ def get_loaders(
     name, tokenizer, train_size=128, val_size=64,seed=0, seqlen=2048, test_only=False, model_type="llama"
 ):
     from_cache = True
-    cache_trainloader = f'data_tmp/{name}_{model_type}_train.cache'
-    cache_valloader = f'data_tmp/{name}_{model_type}_val.cache'
+    data_tmp = "./data_tmp"
+    os.makedirs(data_tmp, exist_ok=True)
+    model_name = tokenizer.name_or_path
+    model_name = model_name.replace("/","_")
+    cache_trainloader = f'{data_tmp}/{model_name}_{train_size}_{val_size}_{seed}_{seqlen}_{test_only}_train.cache'
+    cache_valloader = f'{data_tmp}/{model_name}_{train_size}_{val_size}_{seed}_{seqlen}_{test_only}_val.cache'
     if os.path.exists(cache_trainloader) and os.path.exists(cache_valloader) and from_cache:
         trainloader = torch.load(cache_trainloader)
         valloader = torch.load(cache_valloader)

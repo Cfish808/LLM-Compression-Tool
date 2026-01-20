@@ -377,7 +377,7 @@ def trans2mixprecison_model(model_path, wbits, group_size, real_quant=True, mixe
     model.save_pretrained(save_path)
     tokenizer.save_pretrained(save_path)
 
-def trans_blockwise2llama_model(model, config, tokenizer, model_path):
+def trans_blockwise2llama_model(model):
     print("translate the model from mix-precision blockwise to llama.")
     layers = model.model.layers
     for qlayer in layers:
@@ -394,21 +394,25 @@ def trans_blockwise2llama_model(model, config, tokenizer, model_path):
 
     return model
 
-def trans_e2e2llama_model(model, config, tokenizer, model_path, maskfile_dir):
+def trans_e2e2llama_model(model, mixed_precision=False, maskfile_dir="salient_columns.json"):
     print("translate the model from mix-precision e2e mask training only to llama.")
     layers = model.model.layers
-    import json
-    salient_columns = json.loads(open(maskfile_dir).read())
+    if mixed_precision:
+        import json
+        salient_columns = json.loads(open(maskfile_dir).read())
     for layer_num, qlayer in enumerate(layers):
         for name, module in qlayer.named_modules():
             if isinstance(module, QuantLinear_fake) and not 'head' in name:
                 tensor_name = name
-                salient_cols = salient_columns[f"{layer_num}_{tensor_name}_salient_cols"]
+                if mixed_precision: salient_cols = salient_columns[f"{layer_num}_{tensor_name}_salient_cols"]
 
                 Linear_layer = torch.nn.Linear(module.weight.shape[0], module.weight.shape[1], bias=True if module.bias is not None else False)
                 with torch.no_grad():
-                    Linear_layer.weight = module.weight
-                    Linear_layer.weight[:, salient_cols] = module.mask_weight
+                    if mixed_precision:
+                        Linear_layer.weight = module.weight
+                        Linear_layer.weight[:, salient_cols] = module.mask_weight
+                    else:
+                        Linear_layer.weight = nn.Parameter(module.weight_quantizer(module.weight))
                     if module.bias is not None:
                         Linear_layer.bias = nn.Parameter(module.bias)
                 set_op_by_name(qlayer, name, Linear_layer)
