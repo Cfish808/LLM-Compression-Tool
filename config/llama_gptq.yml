@@ -46,7 +46,7 @@ eval:
       task: ppl ,
       datasets: [c4] ,
       download: False,
-      path: ./c4_local/c4-validation.00000-of-00008.json.gz,
+      path: /netcache/huggingface/c4_local/c4-validation.00000-of-00008.json.gz,
       seq_len: 2048,
       batch_size: 32,
       num_fewshot: 0,
