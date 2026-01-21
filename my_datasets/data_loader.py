@@ -134,7 +134,7 @@ def get_c4(tokenizer, split='validation', nsamples=128, seqlen=2048, seed=42, **
 def get_ptb(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwargs):
     if split == 'train':
         logging.info("get_ptb_train")
-        traindata = load_dataset("mi_optimize/my_datasets/ptb_text_only", 'penn_treebank', split='train')
+        traindata = load_dataset("./my_datasets/ptb_text_only", 'penn_treebank', split='train')
         trainenc = tokenizer(" ".join(traindata["sentence"]), return_tensors="pt")
         random.seed(seed)
         trainloader = []
@@ -149,7 +149,7 @@ def get_ptb(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwarg
 
     if split == 'test':
         logging.info("get_ptb_test")
-        testdata = load_dataset("mi_optimize/my_datasets/ptb_text_only", 'penn_treebank', split='test')
+        testdata = load_dataset("./my_datasets/ptb_text_only", 'penn_treebank', split='test')
         testenc = tokenizer(" ".join(testdata["sentence"]), return_tensors="pt")
         testloader = []
         testenc = testenc.input_ids
@@ -161,7 +161,7 @@ def get_ptb(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwarg
     raise ValueError(f'not support ptb {split} split')
 
 
-def get_download(tokenizer, split='train', nsamples=128, seqlen=2048, seed=42, **kwargs):
+def get_local(tokenizer, split='validation', nsamples=128, seqlen=2048, seed=42, **kwargs):
     path = kwargs.get("path")
     name = kwargs.get("name", None)
     datakey = kwargs.get("datakey", "text")
@@ -170,32 +170,31 @@ def get_download(tokenizer, split='train', nsamples=128, seqlen=2048, seed=42, *
     # For example, in JSON datasets this is typically "text", but it may vary
     # depending on the dataset structure (e.g., "content", "sentence", "document").
     # This key is used to extract textual data before tokenization.
-    if not kwargs.get("download",False):
-        # 本地 json / json.gz 加载
-        data_sets = load_dataset(
-            "json",
-            data_files=path,
-            split="train"
-        )
-    else:
-        data_sets = load_dataset(path, name, split=split)
+    # if not kwargs.get("download",False):
+    # 本地 json / json.gz 加载
+    data_sets = load_dataset("json",data_files=path,split="train")
+    # else:
+    #     data_sets = load_dataset(path, name, split=split)
+    print(f"path: {path}")
     if split == 'train':
-            logging.info("get_train")
-            trainenc = tokenizer(" ".join(data_sets[datakey]), return_tensors="pt")
-            random.seed(seed)
-            trainloader = []
-            for _ in range(nsamples):
-                i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
-                j = i + seqlen
-                inp = trainenc.input_ids[:, i:j]
-                tar = inp.clone()
-                tar[:, :-1] = -100
-                trainloader.append(inp)
-            return trainloader
+        random.seed(seed)
+        trainloader = []
+        for _ in range(nsamples):
+            while True:
+                i = random.randint(0, len(data_sets) - 1)
+                trainenc = tokenizer(data_sets[i][datakey], return_tensors='pt')
+                if trainenc.input_ids.shape[1] >= seqlen:
+                    break
+            i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+            j = i + seqlen
+            inp = trainenc.input_ids[:, i:j]
+            trainloader.append(inp)
+        # return trainloader
+        return up_batch_size(trainloader,kwargs.get("batch_size"))
 
     else:
         logging.info("get_test")
-        testenc = tokenizer(" ".join(data_sets[datakey]), return_tensors="pt")
+        testenc = tokenizer(" ".join(data_sets[:1100][datakey]), return_tensors="pt")
         testloader = []
         testenc = testenc.input_ids
         nsamples = testenc.numel() // seqlen
@@ -205,9 +204,23 @@ def get_download(tokenizer, split='train', nsamples=128, seqlen=2048, seed=42, *
 
     raise ValueError(f'not support ptb {split} split')
 
+def up_batch_size(samples,calib_bs=1):
+    calib_model_inputs = []
+    if calib_bs > 1:
+        for i in range(0, len(samples), calib_bs):
+            start = i
+            end = min(i + calib_bs, len(samples))
+            batch = samples[start:end]
+            batch = torch.cat(batch, dim=0)
+            calib_model_inputs.append(batch)
+    else:
+        calib_model_inputs = samples
+    return calib_model_inputs
 
-def get_calibrate_loader(tokenizer, calibrate_config: dict = {}):
-    calibrate_name = calibrate_config.get("name",None)
+
+
+def get_calibrate_loader(tokenizer, name,**calibrate_config):
+    calibrate_name = name
     calibrate_down = calibrate_config.get("download",False)
     calibrate_path = calibrate_config.get("path",None)
 
@@ -228,9 +241,8 @@ def get_calibrate_loader(tokenizer, calibrate_config: dict = {}):
 
     if calibrate_name == 'boss' and calibrate_down:
         return get_calibrate_boss(tokenizer, **calibrate_config)
-
-    if calibrate_down == True or calibrate_path != None:
-        return get_download(tokenizer, **calibrate_config)
+    if calibrate_down == False and calibrate_path != None:
+        return get_local(tokenizer, **calibrate_config)
 
     raise ValueError(f'not support calibrate name:{calibrate_name}')
 

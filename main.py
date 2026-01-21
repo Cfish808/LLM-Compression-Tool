@@ -6,8 +6,7 @@ import torch
 import yaml
 from easydict import EasyDict
 from loguru import logger
-from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
-from utils.config_utils import to_dotdict,flatten_dict
+
 from eval.eval_by_category import run_evaluation
 from my_datasets import get_calibrate_loader,make_data_module,get_dataset_loader
 from quantization.layers import LinearQuantHub
@@ -40,7 +39,7 @@ def main(config):
             pass
         else:
             model, tokenizer, basemodel = get_model(config)
-            calibrate = get_calibrate_loader(tokenizer=tokenizer, calibrate_config=config.quant.data)
+            calibrate = get_calibrate_loader(tokenizer=tokenizer, **config.quant.data)
 
 
         if config.quant.method == "omniquant":
@@ -106,9 +105,11 @@ def main(config):
         if new_model is None:
             config.base_model.path = config.save
             new_model, tokenizer, _ = get_model(config)
-        eval_config = config.eval
-        model = new_model.to(eval_config.get('device', "cpu"))
-        run_evaluation(model, tokenizer, **eval_config)
+        evals = config.eval
+        model = new_model.to(evals.get('device', "cpu"))
+        for eval_config in evals.tasks:
+            print(eval_config)
+            run_evaluation(model, tokenizer, **eval_config)
 
 
 
