@@ -1,4 +1,5 @@
 import json
+import pdb
 import random
 import logging
 from collections import defaultdict
@@ -164,6 +165,11 @@ def get_download(tokenizer, split='train', nsamples=128, seqlen=2048, seed=42, *
     path = kwargs.get("path")
     name = kwargs.get("name", None)
     datakey = kwargs.get("datakey", "text")
+    # datakey:
+    # Specifies the field name in each dataset sample that contains the raw text.
+    # For example, in JSON datasets this is typically "text", but it may vary
+    # depending on the dataset structure (e.g., "content", "sentence", "document").
+    # This key is used to extract textual data before tokenization.
     data_sets = load_dataset(path, name, split=split)
     if split == 'train':
             logging.info("get_train")
@@ -179,7 +185,7 @@ def get_download(tokenizer, split='train', nsamples=128, seqlen=2048, seed=42, *
                 trainloader.append(inp)
             return trainloader
 
-    if split == 'test':
+    else:
         logging.info("get_ptb_test")
         testenc = tokenizer(" ".join(data_sets[datakey]), return_tensors="pt")
         testloader = []
@@ -191,7 +197,7 @@ def get_download(tokenizer, split='train', nsamples=128, seqlen=2048, seed=42, *
 
     raise ValueError(f'not support ptb {split} split')
 
-def get_local(tokenizer,nsamples=128,seqlen=2048,seed=42,path=None,**kwargs):
+def get_local(tokenizer,nsamples=128,seqlen=2048,seed=42, split='train',path=None,**kwargs):
     """
     Load C4 dataset from local json(.gz) file.
 
@@ -203,34 +209,41 @@ def get_local(tokenizer,nsamples=128,seqlen=2048,seed=42,path=None,**kwargs):
         seed: random seed
         path: local path to c4 json.gz file
     """
-
+    datakey = kwargs.get("datakey", "text")
     if path is None:
-        raise ValueError("Local C4 loading requires `path` to be specified")
+        raise ValueError("Local data loading requires `path` to be specified")
 
 
     # 本地 json / json.gz 加载
-    dataset = load_dataset(
+    data_sets = load_dataset(
         "json",
         data_files=path,
         split="train"
     )
 
-    random.seed(seed)
+    if split == 'train':
+        logging.info("get_train")
+        trainenc = tokenizer(" ".join(data_sets[datakey]), return_tensors="pt")
+        random.seed(seed)
+        trainloader = []
+        for _ in range(nsamples):
+            i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+            j = i + seqlen
+            inp = trainenc.input_ids[:, i:j]
+            tar = inp.clone()
+            tar[:, :-1] = -100
+            trainloader.append(inp)
+        return trainloader
 
-    dataloader = []
-
-    for _ in range(nsamples):
-        while True:
-            idx = random.randint(0, len(dataset) - 1)
-            enc = tokenizer(dataset[idx]["text"], return_tensors="pt")
-            if enc.input_ids.shape[1] >= seqlen:
-                break
-
-        start = random.randint(0, enc.input_ids.shape[1] - seqlen - 1)
-        end = start + seqlen
-        dataloader.append(enc.input_ids[:, start:end])
-
-    return dataloader
+    else:
+        logging.info("get_ptb_test")
+        testenc = tokenizer(" ".join(data_sets[datakey]), return_tensors="pt")
+        testloader = []
+        testenc = testenc.input_ids
+        nsamples = testenc.numel() // seqlen
+        for i in range(nsamples):
+            testloader.append(testenc[:, (i * seqlen):((i + 1) * seqlen)])
+        return testloader
 
 
 def get_calibrate_loader(tokenizer, calibrate_config: dict = {}):
@@ -238,22 +251,22 @@ def get_calibrate_loader(tokenizer, calibrate_config: dict = {}):
     calibrate_down = calibrate_config.get("download",False)
     calibrate_path = calibrate_config.get("path",None)
 
-    if calibrate_name == 'wikitext2':
+    if calibrate_name == 'wikitext2' and calibrate_down:
         return get_wikitext2(tokenizer, **calibrate_config)
 
-    if calibrate_name == 'c4':
+    if calibrate_name == 'c4' and calibrate_down:
         return get_c4(tokenizer, **calibrate_config)
 
-    if calibrate_name == 'ptb':
+    if calibrate_name == 'ptb' and calibrate_down:
         return get_ptb(tokenizer, **calibrate_config)
 
-    if calibrate_name == 'ceval':
+    if calibrate_name == 'ceval' and calibrate_down:
         return get_calibrate_ceval(tokenizer, **calibrate_config)
 
-    if calibrate_name == 'cmmlu':
+    if calibrate_name == 'cmmlu' and calibrate_down:
         return get_calibrate_cmmlu(tokenizer, **calibrate_config)
 
-    if calibrate_name == 'boss':
+    if calibrate_name == 'boss' and calibrate_down:
         return get_calibrate_boss(tokenizer, **calibrate_config)
     if calibrate_down:
         return get_download(tokenizer, **calibrate_config)

@@ -30,11 +30,17 @@ quant:
       name: c4
       nsamples: 128
       seqlen: 2048
-      download: True
-      path: ./c4_local/c4-train.00000-of-01024.json.gz
+      download: False
+      path: /netcache/huggingface/c4_local/c4-train.00000-of-01024.json.gz
       batch_size: 1
-      split:
+      split: train
       seed: 42
+#      datakey:
+# datakey:
+# Specifies the field name in each dataset sample that contains the raw text.
+# For example, in JSON datasets this is typically "text", but it may vary
+# depending on the dataset structure (e.g., "content", "sentence", "document").
+# This key is used to extract textual data before tokenization.
 
 
 eval:

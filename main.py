@@ -122,7 +122,7 @@ if __name__ == '__main__':
     logger.add(sys.stdout, level='INFO')
     llmc_start_time = time.time()
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default="config/onebit.yml", type=str)
+    parser.add_argument('--config', default="config/llama_gptq.yml", type=str)
     parser.add_argument("--local_rank", type=int, default=-1, help="Local rank for distributed training")
     args = parser.parse_args()
     import os
