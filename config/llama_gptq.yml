@@ -10,7 +10,7 @@ quant:
     seqlen: 2048
     device: cuda
     weight:
-      wbit: 4
+      wbit: 3
       abit: 16
       offload: cpu
       block_sequential: True
@@ -32,7 +32,7 @@ quant:
       seqlen: 2048
       download: False
       path: /netcache/huggingface/c4_local/c4-train.00000-of-01024.json.gz
-      batch_size: 64
+      batch_size: 32
       split: train
       seed: 42
 #      datakey:
@@ -40,19 +40,23 @@ quant:
 
 
 eval:
-#    eval_pos: [pretrain, fake_quant]
-    # tasks: [ppl,CommonsenseReasoning]
-    # datasets: [wikitext2,arc_easy]
-    tasks: [ppl]
-    datasets: [c4]
-    download: True
-    path: eval data path
-    seq_len: 2048
-    batch_size: 32
-    num_fewshot: 0
-    nsamples: all
-    device: cuda
-    seqlen: 2048
+  device: cuda
+  tasks: [
+    {
+      task: ppl ,
+      datasets: [c4] ,
+      download: False,
+      path: ./c4_local/c4-validation.00000-of-00008.json.gz,
+      seq_len: 2048,
+      batch_size: 32,
+      num_fewshot: 0,
+      nsamples: all,
+      seqlen: 2048
+    }
+  ]
+  #    eval_pos: [pretrain, fake_quant]
+# tasks: [ppl,CommonsenseReasoning]
+# datasets: [wikitext2,arc_easy]
     # For 7B / 13B model eval, bs can be set to "1", and inference_per_block can be set to "False".
     # For 70B model eval, bs can be set to "20", and inference_per_block can be set to "True".
 save: /home/yejinyu/llama2_7b/output/llama27b_miom_2

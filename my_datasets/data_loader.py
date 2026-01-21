@@ -161,7 +161,7 @@ def get_ptb(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwarg
     raise ValueError(f'not support ptb {split} split')
 
 
-def get_download(tokenizer, split='train', nsamples=128, seqlen=2048, seed=42, **kwargs):
+def get_local(tokenizer, split='validation', nsamples=128, seqlen=2048, seed=42, **kwargs):
     path = kwargs.get("path")
     name = kwargs.get("name", None)
     datakey = kwargs.get("datakey", "text")
@@ -170,16 +170,12 @@ def get_download(tokenizer, split='train', nsamples=128, seqlen=2048, seed=42, *
     # For example, in JSON datasets this is typically "text", but it may vary
     # depending on the dataset structure (e.g., "content", "sentence", "document").
     # This key is used to extract textual data before tokenization.
-    if not kwargs.get("download",False):
-        # 本地 json / json.gz 加载
-        data_sets = load_dataset(
-            "json",
-            data_files=path,
-            split="train"
-        )
-    else:
-        data_sets = load_dataset(path, name, split=split)
-
+    # if not kwargs.get("download",False):
+    # 本地 json / json.gz 加载
+    data_sets = load_dataset("json",data_files=path,split="train")
+    # else:
+    #     data_sets = load_dataset(path, name, split=split)
+    print(f"path: {path}")
     if split == 'train':
         random.seed(seed)
         trainloader = []
@@ -223,8 +219,8 @@ def up_batch_size(samples,calib_bs=1):
 
 
 
-def get_calibrate_loader(tokenizer, calibrate_config: dict = {}):
-    calibrate_name = calibrate_config.get("name",None)
+def get_calibrate_loader(tokenizer, name,**calibrate_config):
+    calibrate_name = name
     calibrate_down = calibrate_config.get("download",False)
     calibrate_path = calibrate_config.get("path",None)
 
@@ -245,9 +241,8 @@ def get_calibrate_loader(tokenizer, calibrate_config: dict = {}):
 
     if calibrate_name == 'boss' and calibrate_down:
         return get_calibrate_boss(tokenizer, **calibrate_config)
-
-    if calibrate_down == True or calibrate_path != None:
-        return get_download(tokenizer, **calibrate_config)
+    if calibrate_down == False and calibrate_path != None:
+        return get_local(tokenizer, **calibrate_config)
 
     raise ValueError(f'not support calibrate name:{calibrate_name}')
 

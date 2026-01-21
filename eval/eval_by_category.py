@@ -11,7 +11,7 @@ from loguru import logger
 from sympy.strategies.core import switch
 from tqdm import tqdm
 
-from my_datasets import get_wikitext2, get_ptb, get_c4
+from my_datasets import get_wikitext2, get_ptb, get_c4, get_calibrate_loader
 
 # === 任务分类 ===
 TASK_CATEGORIES: Dict[str, List[str]] = {
@@ -87,104 +87,133 @@ def compute_ppl(model, tokenizer, loader,**kwargs):
 
     return np.exp(total_loss / total_count)
 
+#
+# def eval_wiki2_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test',**kwargs):
+#     logging.info("Evaluating Perplexity (PPL) on the wikitext2")
+#     dataloader = get_wikitext2(tokenizer, nsamples=nsamples, seqlen=seqlen, split=split)
+#     ppl = compute_ppl(model, tokenizer, dataloader)
+#     logging.info(f'wikitext2 PPL {ppl}')
+#     return ppl
+#
+#
+# def eval_ptb_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test',**kwargs):
+#     logging.info("Evaluating Perplexity (PPL) on the ptb")
+#     dataloader = get_ptb(tokenizer, nsamples=nsamples, seqlen=seqlen, split=split)
+#     ppl = compute_ppl(model, tokenizer, dataloader)
+#     logging.info(f'ptb PPL {ppl}')
+#     return ppl
+#
+#
+# def eval_c4_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='validation',**kwargs):
+#     logging.info("Evaluating Perplexity (PPL) on the c4")
+#     dataloader = get_c4(tokenizer, nsamples=nsamples, seqlen=seqlen, split=split)
+#     ppl = compute_ppl(model, tokenizer, dataloader)
+#     logging.info(f'c4 PPL {ppl}')
+#     return ppl
 
-def eval_wiki2_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test',**kwargs):
-    logging.info("Evaluating Perplexity (PPL) on the wikitext2")
-    dataloader = get_wikitext2(tokenizer, nsamples=nsamples, seqlen=seqlen, split=split)
+def eval_ppl(model, tokenizer,data_name,**kwargs):
+    logging.info(f"Evaluating Perplexity (PPL) on the {data_name}")
+    dataloader = get_calibrate_loader(tokenizer,data_name,**kwargs)
     ppl = compute_ppl(model, tokenizer, dataloader)
-    logging.info(f'wikitext2 PPL {ppl}')
+    logging.info(f'{data_name} PPL {ppl}')
     return ppl
-
-
-def eval_ptb_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='test',**kwargs):
-    logging.info("Evaluating Perplexity (PPL) on the ptb")
-    dataloader = get_ptb(tokenizer, nsamples=nsamples, seqlen=seqlen, split=split)
-    ppl = compute_ppl(model, tokenizer, dataloader)
-    logging.info(f'ptb PPL {ppl}')
-    return ppl
-
-
-def eval_c4_ppl(model, tokenizer, nsamples='all', seqlen=2048, split='validation',**kwargs):
-    logging.info("Evaluating Perplexity (PPL) on the c4")
-    dataloader = get_c4(tokenizer, nsamples=nsamples, seqlen=seqlen, split=split)
-    ppl = compute_ppl(model, tokenizer, dataloader)
-    logging.info(f'c4 PPL {ppl}')
-    return ppl
-
 
 def run_evaluation(
         model,
         tokenizer=None,
-        tasks: List[str] = None,
+        task: str = None,
         datasets: List[str] = None,
         **kwargs
 ) -> Dict:
-    """
-    通用评测入口：
-    - 通过 `category` 选择一类任务，或直接传 `tasks` 覆盖。
-    - model/tokenizer 为已加载的 HF 对象（无需路径）。
-    """
-    # 1) 解析任务列表
-    test_task_name = []
-    task_list = None
-    if tasks:
-        for task in tasks:
-            if task == "ppl":
-                if "c4" in datasets:
-                    test_task_name.append("c4")
-                    eval_c4_ppl(model, tokenizer, **kwargs)
-                if "wikitext2" in datasets:
-                    test_task_name.append("wikitext2")
-                    eval_wiki2_ppl(model, tokenizer, **kwargs)
 
-                if "ptb" in datasets:
-                    test_task_name.append("ptb")
-                    eval_ptb_ppl(model, tokenizer, **kwargs)
-                continue
-            tmp_task = []
-            for dataname in TASK_CATEGORIES[task]:
-                if dataname in datasets:
-                    tmp_task.append(dataname)
-                    test_task_name.append(dataname)
-            if not tmp_task:
-                tmp_task = TASK_CATEGORIES[task]
-                test_task_name.extend(tmp_task)
-            task_list = _unique_keep_order(tmp_task)
-            results = evaluate_model(model=model, tokenizer=tokenizer, task_list=task_list, **kwargs)
-            total_acc = 0
-            logger.info(f"当前测试类别:{task}")
-            try:
-                for task in task_list:
-                    logger.info(results['results'][task])
-                    total_acc += results['results'][task]['acc,none']
-                logger.info(f'Average Acc: {total_acc / len(task_list) * 100:.2f}%')
-            except:
-                pass
+    if task == "ppl":
+        for name in datasets:
+            eval_ppl(model, tokenizer,name, **kwargs)
 
-    elif not tasks:
-        all_task_list = []
-        tmp_task = []
-        for key, val in TASK_CATEGORIES.items():
-            all_task_list.extend(val)
-        for dataname in datasets:
-            if dataname in all_task_list:
-                tmp_task.append(dataname)
-                test_task_name.append(dataname)
-        task_list = _unique_keep_order(tmp_task)
+    elif task == "acc":
+        results = evaluate_model(model=model, tokenizer=tokenizer, task_list=datasets, **kwargs)
         total_acc = 0
-        results = evaluate_model(model=model, tokenizer=tokenizer, task_list=task_list, **kwargs)
-        try:
-            for task in task_list:
-                total_acc += results['results'][task]['acc,none']
-            logger.info(f'Average Acc: {total_acc / len(task_list) * 100:.2f}%')
-        except:
-            pass
+        for task in datasets:
+            logger.info(results['results'][task])
+            total_acc += results['results'][task]['acc,none']
+        logger.info(f'Average Acc: {total_acc / len(datasets) * 100:.2f}%')
 
-    if not test_task_name:
-        raise ValueError("Empty task list to evaluate.")
-    not_in_datasets = [x for x in datasets if x not in test_task_name]
-    if not_in_datasets:
-        logger.info(f"以下任务存不在任务列表中无法完成测试：{not_in_datasets}")
+
+
+
+# def run_evaluation(
+#         model,
+#         tokenizer=None,
+#         tasks: List[str] = None,
+#         datasets: List[str] = None,
+#         **kwargs
+# ) -> Dict:
+#     """
+#     通用评测入口：
+#     - 通过 `category` 选择一类任务，或直接传 `tasks` 覆盖。
+#     - model/tokenizer 为已加载的 HF 对象（无需路径）。
+#     """
+#     # 1) 解析任务列表
+#     test_task_name = []
+#     task_list = None
+#     if tasks:
+#         for task in tasks:
+#             if task == "ppl":
+#                 if "c4" in datasets:
+#                     test_task_name.append("c4")
+#                     eval_c4_ppl(model, tokenizer, **kwargs)
+#                 if "wikitext2" in datasets:
+#                     test_task_name.append("wikitext2")
+#                     eval_wiki2_ppl(model, tokenizer, **kwargs)
+#
+#                 if "ptb" in datasets:
+#                     test_task_name.append("ptb")
+#                     eval_ptb_ppl(model, tokenizer, **kwargs)
+#                 continue
+#             tmp_task = []
+#             for dataname in TASK_CATEGORIES[task]:
+#                 if dataname in datasets:
+#                     tmp_task.append(dataname)
+#                     test_task_name.append(dataname)
+#             if not tmp_task:
+#                 tmp_task = TASK_CATEGORIES[task]
+#                 test_task_name.extend(tmp_task)
+#             task_list = _unique_keep_order(tmp_task)
+#             results = evaluate_model(model=model, tokenizer=tokenizer, task_list=task_list, **kwargs)
+#             total_acc = 0
+#             logger.info(f"当前测试类别:{task}")
+#             try:
+#                 for task in task_list:
+#                     logger.info(results['results'][task])
+#                     total_acc += results['results'][task]['acc,none']
+#                 logger.info(f'Average Acc: {total_acc / len(task_list) * 100:.2f}%')
+#             except:
+#                 pass
+#
+#     elif not tasks:
+#         all_task_list = []
+#         tmp_task = []
+#         for key, val in TASK_CATEGORIES.items():
+#             all_task_list.extend(val)
+#         for dataname in datasets:
+#             if dataname in all_task_list:
+#                 tmp_task.append(dataname)
+#                 test_task_name.append(dataname)
+#         task_list = _unique_keep_order(tmp_task)
+#         total_acc = 0
+#         results = evaluate_model(model=model, tokenizer=tokenizer, task_list=task_list, **kwargs)
+#         try:
+#             for task in task_list:
+#                 total_acc += results['results'][task]['acc,none']
+#             logger.info(f'Average Acc: {total_acc / len(task_list) * 100:.2f}%')
+#         except:
+#             pass
+#
+#     if not test_task_name:
+#         raise ValueError("Empty task list to evaluate.")
+#     not_in_datasets = [x for x in datasets if x not in test_task_name]
+#     if not_in_datasets:
+#         logger.info(f"以下任务存不在任务列表中无法完成测试：{not_in_datasets}")
 
 
 def evaluate_model(
