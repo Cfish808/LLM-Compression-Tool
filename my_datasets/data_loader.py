@@ -134,7 +134,7 @@ def get_c4(tokenizer, split='validation', nsamples=128, seqlen=2048, seed=42, **
 def get_ptb(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwargs):
     if split == 'train':
         logging.info("get_ptb_train")
-        traindata = load_dataset("mi_optimize/my_datasets/ptb_text_only", 'penn_treebank', split='train')
+        traindata = load_dataset("./my_datasets/ptb_text_only", 'penn_treebank', split='train')
         trainenc = tokenizer(" ".join(traindata["sentence"]), return_tensors="pt")
         random.seed(seed)
         trainloader = []
@@ -149,7 +149,7 @@ def get_ptb(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwarg
 
     if split == 'test':
         logging.info("get_ptb_test")
-        testdata = load_dataset("mi_optimize/my_datasets/ptb_text_only", 'penn_treebank', split='test')
+        testdata = load_dataset("./my_datasets/ptb_text_only", 'penn_treebank', split='test')
         testenc = tokenizer(" ".join(testdata["sentence"]), return_tensors="pt")
         testloader = []
         testenc = testenc.input_ids
@@ -179,23 +179,26 @@ def get_download(tokenizer, split='train', nsamples=128, seqlen=2048, seed=42, *
         )
     else:
         data_sets = load_dataset(path, name, split=split)
+
     if split == 'train':
-            logging.info("get_train")
-            trainenc = tokenizer(" ".join(data_sets[datakey]), return_tensors="pt")
-            random.seed(seed)
-            trainloader = []
-            for _ in range(nsamples):
-                i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
-                j = i + seqlen
-                inp = trainenc.input_ids[:, i:j]
-                tar = inp.clone()
-                tar[:, :-1] = -100
-                trainloader.append(inp)
-            return trainloader
+        random.seed(seed)
+        trainloader = []
+        for _ in range(nsamples):
+            while True:
+                i = random.randint(0, len(data_sets) - 1)
+                trainenc = tokenizer(data_sets[i][datakey], return_tensors='pt')
+                if trainenc.input_ids.shape[1] >= seqlen:
+                    break
+            i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+            j = i + seqlen
+            inp = trainenc.input_ids[:, i:j]
+            trainloader.append(inp)
+        # return trainloader
+        return up_batch_size(trainloader,kwargs.get("bs"))
 
     else:
         logging.info("get_test")
-        testenc = tokenizer(" ".join(data_sets[datakey]), return_tensors="pt")
+        testenc = tokenizer(" ".join(data_sets[:1100][datakey]), return_tensors="pt")
         testloader = []
         testenc = testenc.input_ids
         nsamples = testenc.numel() // seqlen
@@ -204,6 +207,21 @@ def get_download(tokenizer, split='train', nsamples=128, seqlen=2048, seed=42, *
         return testloader
 
     raise ValueError(f'not support ptb {split} split')
+
+def up_batch_size(samples,calib_bs=1):
+    calib_model_inputs = []
+    pdb.set_trace()
+    if calib_bs > 1:
+        for i in range(0, len(samples), calib_bs):
+            start = i
+            end = min(i + calib_bs, len(samples))
+            batch = samples[start:end]
+            batch = torch.cat(batch, dim=0)
+            calib_model_inputs.append(batch)
+    else:
+        calib_model_inputs = samples
+    return calib_model_inputs
+
 
 
 def get_calibrate_loader(tokenizer, calibrate_config: dict = {}):

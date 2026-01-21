@@ -34,6 +34,7 @@ quant:
       path: /netcache/huggingface/c4_local/c4-train.00000-of-01024.json.gz
       batch_size: 1
       split: train
+      bs: 32
       seed: 42
 #      datakey:
 # datakey: field name of raw text in the dataset (e.g., "text" for C4/Wiki, "sentence" for PTB)
