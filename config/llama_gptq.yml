@@ -32,9 +32,8 @@ quant:
       seqlen: 2048
       download: False
       path: /netcache/huggingface/c4_local/c4-train.00000-of-01024.json.gz
-      batch_size: 1
+      batch_size: 64
       split: train
-      bs: 32
       seed: 42
 #      datakey:
 # datakey: field name of raw text in the dataset (e.g., "text" for C4/Wiki, "sentence" for PTB)
@@ -56,5 +55,4 @@ eval:
     seqlen: 2048
     # For 7B / 13B model eval, bs can be set to "1", and inference_per_block can be set to "False".
     # For 70B model eval, bs can be set to "20", and inference_per_block can be set to "True".
-    bs: 1
 save: /home/yejinyu/llama2_7b/output/llama27b_miom_2

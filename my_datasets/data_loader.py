@@ -194,7 +194,7 @@ def get_download(tokenizer, split='train', nsamples=128, seqlen=2048, seed=42, *
             inp = trainenc.input_ids[:, i:j]
             trainloader.append(inp)
         # return trainloader
-        return up_batch_size(trainloader,kwargs.get("bs"))
+        return up_batch_size(trainloader,kwargs.get("batch_size"))
 
     else:
         logging.info("get_test")
