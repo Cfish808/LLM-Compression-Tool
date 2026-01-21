@@ -36,11 +36,7 @@ quant:
       split: train
       seed: 42
 #      datakey:
-# datakey:
-# Specifies the field name in each dataset sample that contains the raw text.
-# For example, in JSON datasets this is typically "text", but it may vary
-# depending on the dataset structure (e.g., "content", "sentence", "document").
-# This key is used to extract textual data before tokenization.
+# datakey: field name of raw text in the dataset (e.g., "text" for C4/Wiki, "sentence" for PTB)
 
 
 eval:
