@@ -99,8 +99,8 @@ def main(config):
 
         gen_config = model.generation_config
         gen_config.do_sample = True
-        model.save_pretrained(args.save)
-        tokenizer.save_pretrained(args.save)
+        model.save_pretrained(config.save)
+        tokenizer.save_pretrained(config.save)
 
     if config.get("eval", False):
         if new_model is None:
