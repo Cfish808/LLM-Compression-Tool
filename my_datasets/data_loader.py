@@ -160,23 +160,83 @@ def get_ptb(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwarg
     raise ValueError(f'not support ptb {split} split')
 
 
-def get_test_loader(dataset_name, tokenizer, seqlen=2048, nsamples=128, seed=42, split='test'):
-    logging.info(f"Dataset: {dataset_name}")
-    logging.info(f"Sequence length: {seqlen}")
-    logging.info(f"Number of samples: {nsamples}")
+def get_download(tokenizer, split='train', nsamples=128, seqlen=2048, seed=42, **kwargs):
+    path = kwargs.get("path")
+    name = kwargs.get("name", None)
+    datakey = kwargs.get("datakey", "text")
+    data_sets = load_dataset(path, name, split=split)
+    if split == 'train':
+            logging.info("get_train")
+            trainenc = tokenizer(" ".join(data_sets[datakey]), return_tensors="pt")
+            random.seed(seed)
+            trainloader = []
+            for _ in range(nsamples):
+                i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+                j = i + seqlen
+                inp = trainenc.input_ids[:, i:j]
+                tar = inp.clone()
+                tar[:, :-1] = -100
+                trainloader.append(inp)
+            return trainloader
 
-    if dataset_name == 'wikitext2':
-        return get_wikitext2(tokenizer, nsamples=nsamples, seqlen=seqlen, seed=seed, split=split)
-    if dataset_name == 'c4':
-        return get_c4(tokenizer, nsamples=nsamples, seed=seed, seqlen=seqlen)
-    if dataset_name == 'ptb':
-        return get_ptb(tokenizer, nsamples=nsamples, seed=seed, seqlen=seqlen)
+    if split == 'test':
+        logging.info("get_ptb_test")
+        testenc = tokenizer(" ".join(data_sets[datakey]), return_tensors="pt")
+        testloader = []
+        testenc = testenc.input_ids
+        nsamples = testenc.numel() // seqlen
+        for i in range(nsamples):
+            testloader.append(testenc[:, (i * seqlen):((i + 1) * seqlen)])
+        return testloader
 
-    raise ValueError(f"Unknown dataset: {dataset_name}")
+    raise ValueError(f'not support ptb {split} split')
+
+def get_local(tokenizer,nsamples=128,seqlen=2048,seed=42,path=None,**kwargs):
+    """
+    Load C4 dataset from local json(.gz) file.
+
+    Args:
+        tokenizer: HuggingFace tokenizer
+        split: 'train' or 'validation'
+        nsamples: number of samples
+        seqlen: sequence length
+        seed: random seed
+        path: local path to c4 json.gz file
+    """
+
+    if path is None:
+        raise ValueError("Local C4 loading requires `path` to be specified")
+
+
+    # 本地 json / json.gz 加载
+    dataset = load_dataset(
+        "json",
+        data_files=path,
+        split="train"
+    )
+
+    random.seed(seed)
+
+    dataloader = []
+
+    for _ in range(nsamples):
+        while True:
+            idx = random.randint(0, len(dataset) - 1)
+            enc = tokenizer(dataset[idx]["text"], return_tensors="pt")
+            if enc.input_ids.shape[1] >= seqlen:
+                break
+
+        start = random.randint(0, enc.input_ids.shape[1] - seqlen - 1)
+        end = start + seqlen
+        dataloader.append(enc.input_ids[:, start:end])
+
+    return dataloader
 
 
 def get_calibrate_loader(tokenizer, calibrate_config: dict = {}):
-    calibrate_name = calibrate_config['name']
+    calibrate_name = calibrate_config.get("name",None)
+    calibrate_down = calibrate_config.get("download",False)
+    calibrate_path = calibrate_config.get("path",None)
 
     if calibrate_name == 'wikitext2':
         return get_wikitext2(tokenizer, **calibrate_config)
@@ -195,6 +255,10 @@ def get_calibrate_loader(tokenizer, calibrate_config: dict = {}):
 
     if calibrate_name == 'boss':
         return get_calibrate_boss(tokenizer, **calibrate_config)
+    if calibrate_down:
+        return get_download(tokenizer, **calibrate_config)
+    if calibrate_down == False and calibrate_path != None:
+        return get_local(tokenizer, **calibrate_config)
 
     raise ValueError(f'not support calibrate name:{calibrate_name}')
 
