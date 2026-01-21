@@ -83,7 +83,6 @@ def main(config):
             model = run_kd(model=model,tokenizer=tokenizer,dataset=calibrate,model_args=model_args,data_args=data_args,training_args=training_args)
             new_model = model
         else:
-            print("开始量化")
             new_model = basemodel.replace_module(model, exclude_layers=config.quant.skip_layers, include_layers=['.*'])
             new_model = llama_sequential(model=new_model, calibrate_data=calibrate, **config.quant)
             logger.info(f'model: {model}')

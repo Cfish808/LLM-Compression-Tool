@@ -210,7 +210,6 @@ def get_download(tokenizer, split='train', nsamples=128, seqlen=2048, seed=42, *
 
 def up_batch_size(samples,calib_bs=1):
     calib_model_inputs = []
-    pdb.set_trace()
     if calib_bs > 1:
         for i in range(0, len(samples), calib_bs):
             start = i
