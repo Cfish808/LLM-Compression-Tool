@@ -1,4 +1,5 @@
 import json
+import pdb
 import random
 import logging
 from collections import defaultdict
@@ -160,41 +161,76 @@ def get_ptb(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwarg
     raise ValueError(f'not support ptb {split} split')
 
 
-def get_test_loader(dataset_name, tokenizer, seqlen=2048, nsamples=128, seed=42, split='test'):
-    logging.info(f"Dataset: {dataset_name}")
-    logging.info(f"Sequence length: {seqlen}")
-    logging.info(f"Number of samples: {nsamples}")
+def get_download(tokenizer, split='train', nsamples=128, seqlen=2048, seed=42, **kwargs):
+    path = kwargs.get("path")
+    name = kwargs.get("name", None)
+    datakey = kwargs.get("datakey", "text")
+    # datakey:
+    # Specifies the field name in each dataset sample that contains the raw text.
+    # For example, in JSON datasets this is typically "text", but it may vary
+    # depending on the dataset structure (e.g., "content", "sentence", "document").
+    # This key is used to extract textual data before tokenization.
+    if not kwargs.get("download",False):
+        # 本地 json / json.gz 加载
+        data_sets = load_dataset(
+            "json",
+            data_files=path,
+            split="train"
+        )
+    else:
+        data_sets = load_dataset(path, name, split=split)
+    if split == 'train':
+            logging.info("get_train")
+            trainenc = tokenizer(" ".join(data_sets[datakey]), return_tensors="pt")
+            random.seed(seed)
+            trainloader = []
+            for _ in range(nsamples):
+                i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+                j = i + seqlen
+                inp = trainenc.input_ids[:, i:j]
+                tar = inp.clone()
+                tar[:, :-1] = -100
+                trainloader.append(inp)
+            return trainloader
 
-    if dataset_name == 'wikitext2':
-        return get_wikitext2(tokenizer, nsamples=nsamples, seqlen=seqlen, seed=seed, split=split)
-    if dataset_name == 'c4':
-        return get_c4(tokenizer, nsamples=nsamples, seed=seed, seqlen=seqlen)
-    if dataset_name == 'ptb':
-        return get_ptb(tokenizer, nsamples=nsamples, seed=seed, seqlen=seqlen)
+    else:
+        logging.info("get_test")
+        testenc = tokenizer(" ".join(data_sets[datakey]), return_tensors="pt")
+        testloader = []
+        testenc = testenc.input_ids
+        nsamples = testenc.numel() // seqlen
+        for i in range(nsamples):
+            testloader.append(testenc[:, (i * seqlen):((i + 1) * seqlen)])
+        return testloader
 
-    raise ValueError(f"Unknown dataset: {dataset_name}")
+    raise ValueError(f'not support ptb {split} split')
 
 
 def get_calibrate_loader(tokenizer, calibrate_config: dict = {}):
-    calibrate_name = calibrate_config['name']
+    calibrate_name = calibrate_config.get("name",None)
+    calibrate_down = calibrate_config.get("download",False)
+    calibrate_path = calibrate_config.get("path",None)
 
-    if calibrate_name == 'wikitext2':
+    if calibrate_name == 'wikitext2' and calibrate_down:
         return get_wikitext2(tokenizer, **calibrate_config)
 
-    if calibrate_name == 'c4':
+    if calibrate_name == 'c4' and calibrate_down:
         return get_c4(tokenizer, **calibrate_config)
 
-    if calibrate_name == 'ptb':
+    if calibrate_name == 'ptb' and calibrate_down:
         return get_ptb(tokenizer, **calibrate_config)
 
-    if calibrate_name == 'ceval':
+    if calibrate_name == 'ceval' and calibrate_down:
         return get_calibrate_ceval(tokenizer, **calibrate_config)
 
-    if calibrate_name == 'cmmlu':
+    if calibrate_name == 'cmmlu' and calibrate_down:
         return get_calibrate_cmmlu(tokenizer, **calibrate_config)
 
-    if calibrate_name == 'boss':
+    if calibrate_name == 'boss' and calibrate_down:
         return get_calibrate_boss(tokenizer, **calibrate_config)
+
+    if calibrate_down == True or calibrate_path != None:
+        return get_download(tokenizer, **calibrate_config)
 
     raise ValueError(f'not support calibrate name:{calibrate_name}')
 

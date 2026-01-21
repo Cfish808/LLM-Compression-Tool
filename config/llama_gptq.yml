@@ -30,10 +30,13 @@ quant:
       name: c4
       nsamples: 128
       seqlen: 2048
-      download: True
-      path: eval data path
+      download: False
+      path: /netcache/huggingface/c4_local/c4-train.00000-of-01024.json.gz
       batch_size: 1
+      split: train
       seed: 42
+#      datakey:
+# datakey: field name of raw text in the dataset (e.g., "text" for C4/Wiki, "sentence" for PTB)
 
 
 eval:
