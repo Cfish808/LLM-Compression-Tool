@@ -77,7 +77,8 @@ def get_wikitext2(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, *
             j = i + seqlen
             inp = trainenc.input_ids[:, i:j]
             trainloader.append(inp)
-        return trainloader
+        # return trainloader
+        return up_batch_size(trainloader,kwargs.get("batch_size"))
 
     if split == 'test':
         logging.info("get_wikitext2_test")
@@ -110,7 +111,8 @@ def get_c4(tokenizer, split='validation', nsamples=128, seqlen=2048, seed=42, **
             j = i + seqlen
             inp = trainenc.input_ids[:, i:j]
             trainloader.append(inp)
-        return trainloader
+        # return trainloader
+        return up_batch_size(trainloader,kwargs.get("batch_size"))
 
 
     if split == 'validation':
@@ -145,7 +147,8 @@ def get_ptb(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwarg
             tar = inp.clone()
             tar[:, :-1] = -100
             trainloader.append(inp)
-        return trainloader
+        # return trainloader
+        return up_batch_size(trainloader,kwargs.get("batch_size"))
 
     if split == 'test':
         logging.info("get_ptb_test")
