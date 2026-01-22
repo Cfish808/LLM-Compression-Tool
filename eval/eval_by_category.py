@@ -71,7 +71,6 @@ def _wrap_hflm(model, tokenizer=None, device="cuda", **hflm_kwargs):
     if hasattr(model, "to"):
         model = model.to(device)
         model.eval()
-
     if tokenizer is not None:
         return HFLM(pretrained=model, tokenizer=tokenizer, device=device, **hflm_kwargs)
     return HFLM(pretrained=model, device=device, **hflm_kwargs)
