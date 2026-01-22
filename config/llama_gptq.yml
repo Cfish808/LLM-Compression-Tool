@@ -4,7 +4,7 @@ base_model:
     path: /netcache/huggingface/llama2_7b/
     torch_dtype: auto
     tokenizer_mode: fast
-quant:
+quant_s:
     method: gptq
     skip_layers: [ lm_head ]
     seqlen: 2048
@@ -43,13 +43,13 @@ eval:
   device: cuda
   tasks: [
     {
-      task: ppl ,
-      datasets: [c4] ,
-      download: False,
+      task: acc ,
+      datasets: [winogrande, hellaswag] ,
+      download: True,
       path: ./c4_local/c4-validation.00000-of-00008.json.gz,
       seq_len: 2048,
       batch_size: 32,
-      num_fewshot: 0,
+      num_fewshot: 5,
       nsamples: all,
       seqlen: 2048
     }
