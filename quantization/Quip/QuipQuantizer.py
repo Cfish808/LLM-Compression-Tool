@@ -464,7 +464,7 @@ class LinearQuipQuantizer(BaseQuantizer):
             quant_w = quant_w.to(self.quant_hub_linear.core.weight.dtype)
             self.w_scale = MEMORY_BANK.add_value('{id}_w_scale'.format(id=id(self)), scale, self.offload)
             self.w_zero_point = MEMORY_BANK.add_value('{id}_w_zero_point'.format(id=id(self)), zero, self.offload)
-            self.Q = MEMORY_BANK.add_value('{id}_Q'.format(id=id(self)), quant_w, self.offload)
+            self.fake_w = quant_w
             
             del w, H, U, V, scaleWH, quant_w, err, self.quant_hub_linear.core.H, self.quant_hub_linear.core.nsamples
             clear_mem()
@@ -484,14 +484,14 @@ class LinearQuipQuantizer(BaseQuantizer):
             w = self.quant_hub_linear.core.weight.float()
             x = x.float()
         else:
-            w = self.Q.value.to(x)
+            w = self.fake_w.to(x)
 
         bias = None if self.quant_hub_linear.core.bias is None else self.quant_hub_linear.core.bias.to(x)
         return F.linear(x, w, bias).to(origin_dtype)
     
     def to(self, desc):
-        if hasattr(self, 'Q'):
-            self.Q.to(desc)
+        if hasattr(self, 'fake_w'):
+            self.fake_w.to(desc)
         if hasattr(self, 'w_scale'):
             self.w_scale.to(desc)
         if hasattr(self, 'w_zero_point'):
