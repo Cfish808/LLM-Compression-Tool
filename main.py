@@ -106,11 +106,18 @@ def main(config):
             config.base_model.path = config.save
             new_model, tokenizer, _ = get_model(config)
         evals = config.eval
-        model = new_model.to(evals.get('device', "cpu"))
+        # 获取全局 device 设置
+        global_device = evals.get('device', "cpu")
+        model = new_model.to(global_device)
         for eval_config in evals.tasks:
-            print(eval_config)
+            print(f"Running eval: {eval_config}")
+            eval_config['device'] = global_device
             run_evaluation(model, tokenizer, **eval_config)
 
+        # model = new_model.to(evals.get('device', "cpu"))
+        # for eval_config in evals.tasks:
+        #     print(eval_config)
+        #     run_evaluation(model, tokenizer, **eval_config)
 
 
 def mkdirs(path):
@@ -129,10 +136,9 @@ if __name__ == '__main__':
     import os
 
     # 设置 HuggingFace 的缓存和镜像源
-    os.environ['HF_HOME'] = './.huggingface'
-    os.environ['HF_DATASETS_CACHE'] = './.huggingface'
+    os.environ['HF_HOME'] = '/netcache/huggingface/'
+    os.environ['HF_DATASETS_CACHE'] = '/netcache/huggingface/datasets/'
     os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
-
 
     with open(args.config, 'r') as file:
         config = yaml.safe_load(file)

@@ -1,0 +1,58 @@
+
+base_model:
+    type: Llama
+    path: /netcache/huggingface/Llama-2-13b-hf/
+    torch_dtype: auto
+    tokenizer_mode: fast
+quant:
+    method: owq
+    skip_layers: [ lm_head ]
+    seqlen: 2048
+    device: cuda
+    weight:
+      wbit: 3
+      abit: 16
+      offload: cpu
+      block_sequential: True
+      layer_sequential: True
+      w_qtype: per_group
+      groupsize: 128
+      blocksize: 128
+      percdamp: 0.01
+      actorder: True
+      owq_ratio: 0.1
+    special:
+      actorder: True
+      static_groups: False
+      percdamp: 0.01
+      blocksize: 128
+      true_sequential: True
+    data:
+      name: c4
+      split: train
+      nsamples: 128       
+      seqlen: 2048
+      download: False
+      path: /netcache/huggingface/c4_local/c4-train.00000-of-01024.json.gz
+      batch_size: 32
+      seed: 42
+
+
+eval:
+  device: cuda
+  tasks: [
+    {
+      task: ppl ,
+      datasets: [c4],   # PPL 数据集  [wikitext2, c4, ptb]
+      download: False,
+      path: /netcache/huggingface/c4_local/c4-validation.00000-of-00008.json.gz,
+      seq_len: 2048,
+      batch_size: 32,
+      nsamples: all,
+      seqlen: 2048
+    }
+  ]
+
+# ============================================
+# 保存路径 
+save: /netcache/zcx2/compress_models/llama2_13b/llama2_13b_owq_w3/
