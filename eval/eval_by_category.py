@@ -11,7 +11,7 @@ from loguru import logger
 from sympy.strategies.core import switch
 from tqdm import tqdm
 
-from my_datasets import get_wikitext2, get_ptb, get_c4, get_calibrate_loader
+from my_datasets import  get_calibrate_loader
 
 # === 任务分类 ===
 TASK_CATEGORIES: Dict[str, List[str]] = {
@@ -63,10 +63,6 @@ def _wrap_hflm(model, tokenizer=None, device="cuda", **hflm_kwargs):
         - tokenizer: transformers.PreTrainedTokenizer (建议提供)
         其余可选参数：device, dtype, max_length 等（按需传入）
         """
-    # if hasattr(model, "to"):
-    #     model = model.to(device)
-    #     model.eval()
-
     if tokenizer is not None:
         return HFLM(pretrained=model, tokenizer=tokenizer, device=device, **hflm_kwargs)
     return HFLM(pretrained=model, device=device, **hflm_kwargs)

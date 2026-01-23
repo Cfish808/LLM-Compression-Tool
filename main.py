@@ -107,7 +107,11 @@ def main(config):
             new_model, tokenizer, _ = get_model(config)
         evals = config.eval
         device = evals.get('device', "cpu")
-        model = new_model.to(device)
+
+        if new_model.device.type == device:
+            model = new_model
+        else:
+            model = new_model.to(device)
 
         for eval_config in evals.tasks:
             print(eval_config)
