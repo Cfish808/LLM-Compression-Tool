@@ -4,55 +4,50 @@ base_model:
     path: /netcache/huggingface/llama2_7b/
     torch_dtype: auto
     tokenizer_mode: fast
-quant:
-    method: spqr
-    skip_layers: [ lm_head ]
-    seqlen: 2048
-    device: cuda
-    weight:
-      wbit: 4
-      abit: 16
-      offload: cpu
-      block_sequential: True
-      layer_sequential: True
-      w_qtype: per_group
-      groupsize: 128
-      blocksize: 128
-      percdamp: 0.01
-      actorder: True
-      outlier_relative_threshold: 0.00001
-      simplified_outliers: False
-    special:
-      actorder: True
-      static_groups: False
-      percdamp: 0.01
-      blocksize: 128
-      true_sequential: True
-    data:
-      name: c4
-      split: train
-      nsamples: 128       
-      seqlen: 2048
-      download: False
-      path: /netcache/huggingface/c4_local/c4-train.00000-of-01024.json.gz
-      batch_size: 32
-      seed: 42
+# quant:
+#     method: spqr
+#     skip_layers: [ lm_head ]
+#     seqlen: 2048
+#     device: cuda
+#     weight:
+#       wbit: 4
+#       abit: 16
+#       offload: cpu
+#       block_sequential: True
+#       layer_sequential: True
+#       w_qtype: per_group
+#       groupsize: 128
+#       blocksize: 128
+#       percdamp: 0.01
+#       actorder: True
+#       outlier_relative_threshold: 0.00001
+#       simplified_outliers: False
+#     special:
+#       actorder: True
+#       static_groups: False
+#       percdamp: 0.01
+#       blocksize: 128
+#       true_sequential: True
+#     data:
+#       name: c4
+#       split: train
+#       nsamples: 128       
+#       seqlen: 2048
+#       download: False
+#       path: /netcache/huggingface/c4_local/c4-train.00000-of-01024.json.gz
+#       batch_size: 32
+#       seed: 42
 
 eval:
-    # 评测任务类型
-    tasks: [Commonsense_Reasoning]
-
-    # 评测数据集 
-    datasets: [winogrande, hellaswag, arc_easy, arc_challenge]
-    # datasets: [commonsense_qa, piqa, social_iqa]
-
-    download: False
-    path: /netcache/huggingface/c4_local/c4-validation.00000-of-00008.json.gz,
-    seq_len: 2048
-    batch_size: 32
-    num_fewshot: 5
-    nsamples: all
-    device: cuda
-    seqlen: 2048
+  device: cuda
+  tasks:
+    - task: ppl
+      datasets: [c4]   # PPL 数据集  [wikitext2, c4, ptb]
+      download: False
+      path: /netcache/huggingface/c4_local/c4-validation.00000-of-00008.json.gz
+      seq_len: 2048
+      batch_size: 32
+      nsamples: all
+      seqlen: 2048
 
 save: /netcache/zcx2/compress_models/llama2_7b/llama2_7b_spqr_w4/

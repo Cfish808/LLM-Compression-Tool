@@ -1,0 +1,60 @@
+base_model:
+    type: Llama
+    path: /netcache/huggingface/llama2_7b/
+    torch_dtype: auto
+    tokenizer_mode: fast
+
+quant:
+    method: quip
+    skip_layers: [ lm_head ]
+    seqlen: 2048
+    device: cuda
+    weight:
+      wbit: 2
+      abit: 16
+      offload: cpu
+      block_sequential: True
+      layer_sequential: True
+      w_has_zero: True
+      a_has_zero: True
+      w_unsign: False
+      a_unsign: False
+      w_groupsize: -1
+      a_groupsize: -1
+      a_qtype: "per_token"  #select from ["per_tensor", "per_token", "per_group", "per_dimension"]                 
+      w_qtype: "per_tensor"  # select from ["per_tensor", "per_channel", "per_group"]             
+      quantization_type: 'static'
+       # QUIP论文中的关键参数配置
+      incoh_processing: true   # 启用不连贯处理（论文核心算法）
+      qmethod: 'ldlq'         # 使用LDLQ算法
+      npasses: 6              # 按照论文使用6次迭代
+      qfn: 'b'               # 对称不连贯量化函数
+      # QUIP算法的预处理配置
+      preproc_gptqH: true     # 启用GPTQ风格的Hessian修改
+      preproc_rescale: true   # 启用对角重缩放
+      preproc_proj: true      # 启用随机正交投影
+      preproc_proj_extra: 0  # 使用完整的随机正交矩阵
+      alpha: 0.01            # Hessian阻尼系数
+      percdamp: 0.01         # 阻尼百分比
+    data:
+      name: c4
+      split: train
+      nsamples: 128       
+      seqlen: 2048
+      download: False
+      path: /netcache/huggingface/c4_local/c4-train.00000-of-01024.json.gz
+      batch_size: 32
+      seed: 42
+
+eval:
+  device: cuda
+  tasks:
+    - task: ppl
+      datasets: [c4]   # PPL 数据集  [wikitext2, c4, ptb]
+      download: False
+      path: /netcache/huggingface/c4_local/c4-validation.00000-of-00008.json.gz
+      seq_len: 2048
+      batch_size: 32
+      nsamples: all
+      seqlen: 2048
+save: /netcache/zcx2/compress_models/llama2_7b/llama2_7b_quip_w2/

@@ -21,7 +21,7 @@ quant:
       a_unsign: False
       w_groupsize: 128
       a_groupsize: -1
-      a_qtype: "per_token"  #select from ["per_tensor", "per_token", "per_group", "per_dimension"]                 
+      a_qtype: "per_tensor"  #select from ["per_tensor", "per_token", "per_group", "per_dimension"]                 
       w_qtype: "per_group"  # select from ["per_tensor", "per_channel", "per_group"]             
       quantization_type: 'static'
     data:
@@ -45,4 +45,4 @@ eval:
       batch_size: 32
       nsamples: all
       seqlen: 2048
-save: /netcache/zcx2/compress_models/llama2_7b/llama2_7b_rtn_w4a16/
+save: /netcache/zcx2/compress_models/llama2_7b/llama2_7b_rtn_w4a8/

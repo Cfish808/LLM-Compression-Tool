@@ -5,12 +5,12 @@ base_model:
     torch_dtype: auto
     tokenizer_mode: fast
 quant:
-    method: owq
+    method: spqr
     skip_layers: [ lm_head ]
     seqlen: 2048
     device: cuda
     weight:
-      wbit: 4
+      wbit: 2
       abit: 16
       offload: cpu
       block_sequential: True
@@ -20,7 +20,8 @@ quant:
       blocksize: 128
       percdamp: 0.01
       actorder: True
-      owq_ratio: 0.1
+      outlier_relative_threshold: 0.00001
+      simplified_outliers: False
     special:
       actorder: True
       static_groups: False
@@ -37,7 +38,6 @@ quant:
       batch_size: 32
       seed: 42
 
-
 eval:
   device: cuda
   tasks:
@@ -50,6 +50,4 @@ eval:
       nsamples: all
       seqlen: 2048
 
-# ============================================
-# 保存路径 
-save: /netcache/zcx2/compress_models/llama2_13b/llama2_13b_owq_w4/
+save: /netcache/zcx2/compress_models/llama2_13b/llama2_13b_spqr_w2/

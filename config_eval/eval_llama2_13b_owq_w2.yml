@@ -10,7 +10,7 @@ quant:
     seqlen: 2048
     device: cuda
     weight:
-      wbit: 4
+      wbit: 2
       abit: 16
       offload: cpu
       block_sequential: True
@@ -37,7 +37,6 @@ quant:
       batch_size: 32
       seed: 42
 
-
 eval:
   device: cuda
   tasks:
@@ -52,4 +51,4 @@ eval:
 
 # ============================================
 # 保存路径 
-save: /netcache/zcx2/compress_models/llama2_13b/llama2_13b_owq_w4/
+save: /netcache/zcx2/compress_models/llama2_13b/llama2_13b_owq_w2/

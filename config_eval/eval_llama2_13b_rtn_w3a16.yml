@@ -5,28 +5,25 @@ base_model:
     torch_dtype: auto
     tokenizer_mode: fast
 quant:
-    method: owq
+    method: rtn
     skip_layers: [ lm_head ]
     seqlen: 2048
     device: cuda
     weight:
-      wbit: 4
+      wbit: 3
       abit: 16
       offload: cpu
       block_sequential: True
       layer_sequential: True
-      w_qtype: per_group
-      groupsize: 128
-      blocksize: 128
-      percdamp: 0.01
-      actorder: True
-      owq_ratio: 0.1
-    special:
-      actorder: True
-      static_groups: False
-      percdamp: 0.01
-      blocksize: 128
-      true_sequential: True
+      w_has_zero: False
+      a_has_zero: True
+      w_unsign: False
+      a_unsign: False
+      w_groupsize: 128
+      a_groupsize: -1
+      a_qtype: "per_token"  #select from ["per_tensor", "per_token", "per_group", "per_dimension"]                 
+      w_qtype: "per_group"  # select from ["per_tensor", "per_channel", "per_group"]             
+      quantization_type: 'static'
     data:
       name: c4
       split: train
@@ -36,7 +33,6 @@ quant:
       path: /netcache/huggingface/c4_local/c4-train.00000-of-01024.json.gz
       batch_size: 32
       seed: 42
-
 
 eval:
   device: cuda
@@ -49,7 +45,4 @@ eval:
       batch_size: 32
       nsamples: all
       seqlen: 2048
-
-# ============================================
-# 保存路径 
-save: /netcache/zcx2/compress_models/llama2_13b/llama2_13b_owq_w4/
+save: /netcache/zcx2/compress_models/llama2_13b/llama2_13b_rtn_w3a16/
