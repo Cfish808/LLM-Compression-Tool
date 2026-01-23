@@ -2,8 +2,9 @@
 base_model:
     type: Llama
     path: /netcache/huggingface/llama2_7b/
-    torch_dtype: auto
+    torch_dtype: torch.float16
     tokenizer_mode: fast
+    device_map: auto
 quant_s:
     method: gptq
     skip_layers: [ lm_head ]

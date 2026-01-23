@@ -55,7 +55,8 @@ def _unique_keep_order(xs: Iterable[str]) -> List[str]:
     return out
 
 
-def _wrap_hflm(model, tokenizer=None, **hflm_kwargs):
+
+def _wrap_hflm(model, tokenizer=None, device="cuda", **hflm_kwargs):
     """
         将已有 HF 模型对象封装为 lm_eval 的 HFLM。
         - model: transformers.PreTrainedModel
@@ -65,9 +66,10 @@ def _wrap_hflm(model, tokenizer=None, **hflm_kwargs):
     # if hasattr(model, "to"):
     #     model = model.to(device)
     #     model.eval()
+
     if tokenizer is not None:
-        return HFLM(pretrained=model, tokenizer=tokenizer, **hflm_kwargs)
-    return HFLM(pretrained=model, **hflm_kwargs)
+        return HFLM(pretrained=model, tokenizer=tokenizer, device=device, **hflm_kwargs)
+    return HFLM(pretrained=model, device=device, **hflm_kwargs)
 
 
 @torch.no_grad()
@@ -246,7 +248,7 @@ def evaluate_model(
     # 1) 处理 HFLM 参数
     task_manager = lm_eval.tasks.TaskManager()
     # 2) 封装成 HFLM
-    lm = _wrap_hflm(model, tokenizer, batch_size=batch_size, device=device)
+    lm = _wrap_hflm(model, tokenizer, batch_size=batch_size, device=device,**kwargs)
 
     # 3) 调用 lm_eval 进行评测
     results = evaluator.simple_evaluate(

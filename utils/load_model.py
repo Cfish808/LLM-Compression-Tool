@@ -107,6 +107,13 @@ def get_checkpoints(model_name_or_path: str, extensions: List[str], possible_mod
 
     return False, resolved_archive_file, true_model_basename
 
+DTYPE_MAP = {
+    "torch.float16": torch.float16,
+    "torch.bfloat16": torch.bfloat16,
+    "torch.float32": torch.float32,
+    "torch.float": torch.float64,
+    "auto":"auto"
+}
 
 class BaseModel():
     def __init__(self, config,device_map=None,use_cache=False):
@@ -137,7 +144,7 @@ class BaseModel():
                 config=self.model_config,
                 device_map=self.device_map,
                 trust_remote_code=True,
-                torch_dtype=self.model_config.torch_dtype,
+                torch_dtype="auto",
                 low_cpu_mem_usage=True,
             )
         else:
@@ -146,7 +153,7 @@ class BaseModel():
                 config=self.model_config,
                 device_map=self.device_map,
                 trust_remote_code=True,
-                # torch_dtype=torch.float16,
+                torch_dtype=DTYPE_MAP.get(self.model_config.torch_dtype,"auto"),
                 low_cpu_mem_usage=True,
             )
         self.model.eval()
