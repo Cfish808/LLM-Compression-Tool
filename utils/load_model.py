@@ -120,8 +120,8 @@ class BaseModel():
         self.tokenizer_mode = self.config.base_model.get('tokenizer_mode', 'fast')
         self.model = None  # 子类加载具体模型
         self.tokenizer = None  # 子类加载具体tokenizer
-        self.use_cache = use_cache
-        self.device_map = device_map
+        self.use_cache = self.config.base_model.get("use_cache",False)
+        self.device_map = self.config.base_model.get("device_map","auto")
 
     def build_model(self):
         self.model_config = AutoConfig.from_pretrained(
