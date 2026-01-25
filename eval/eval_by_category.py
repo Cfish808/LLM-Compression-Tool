@@ -11,7 +11,7 @@ from loguru import logger
 from sympy.strategies.core import switch
 from tqdm import tqdm
 
-from my_datasets import get_wikitext2, get_ptb, get_c4, get_calibrate_loader
+from my_datasets import  get_calibrate_loader
 
 # === 任务分类 ===
 TASK_CATEGORIES: Dict[str, List[str]] = {
@@ -55,16 +55,17 @@ def _unique_keep_order(xs: Iterable[str]) -> List[str]:
     return out
 
 
-def _wrap_hflm(model, tokenizer=None, **hflm_kwargs):
+
+def _wrap_hflm(model, tokenizer=None, device="cuda", **hflm_kwargs):
     """
-    将已有 HF 模型对象封装为 lm_eval 的 HFLM。
-    - model: transformers.PreTrainedModel
-    - tokenizer: transformers.PreTrainedTokenizer (建议提供)
-    其余可选参数：device, dtype, max_length 等（按需传入）
-    """
+        将已有 HF 模型对象封装为 lm_eval 的 HFLM。
+        - model: transformers.PreTrainedModel
+        - tokenizer: transformers.PreTrainedTokenizer (建议提供)
+        其余可选参数：device, dtype, max_length 等（按需传入）
+        """
     if tokenizer is not None:
-        return HFLM(pretrained=model, tokenizer=tokenizer, **hflm_kwargs)
-    return HFLM(pretrained=model, **hflm_kwargs)
+        return HFLM(pretrained=model, tokenizer=tokenizer, device=device, **hflm_kwargs)
+    return HFLM(pretrained=model, device=device, **hflm_kwargs)
 
 
 @torch.no_grad()
@@ -121,6 +122,7 @@ def eval_ppl(model, tokenizer,data_name,**kwargs):
 def run_evaluation(
         model,
         tokenizer=None,
+        device="cuda",
         task: str = None,
         datasets: List[str] = None,
         **kwargs
@@ -131,7 +133,7 @@ def run_evaluation(
             eval_ppl(model, tokenizer,name, **kwargs)
 
     elif task == "acc":
-        results = evaluate_model(model=model, tokenizer=tokenizer, task_list=datasets, **kwargs)
+        results = evaluate_model(model=model, tokenizer=tokenizer, task_list=datasets, device=device,**kwargs)
         total_acc = 0
         for task in datasets:
             logger.info(results['results'][task])
@@ -222,7 +224,7 @@ def evaluate_model(
         task_list=None,
         num_fewshot=0,
         batch_size=1,
-        device=None,
+        device="cuda",
         **kwargs
 ):
     """
@@ -242,7 +244,7 @@ def evaluate_model(
     # 1) 处理 HFLM 参数
     task_manager = lm_eval.tasks.TaskManager()
     # 2) 封装成 HFLM
-    lm = _wrap_hflm(model, tokenizer, batch_size=batch_size, device=device)
+    lm = _wrap_hflm(model, tokenizer, batch_size=batch_size, device=device,**kwargs)
 
     # 3) 调用 lm_eval 进行评测
     results = evaluator.simple_evaluate(

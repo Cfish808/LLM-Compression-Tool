@@ -106,10 +106,16 @@ def main(config):
             config.base_model.path = config.save
             new_model, tokenizer, _ = get_model(config)
         evals = config.eval
-        model = new_model.to(evals.get('device', "cpu"))
+        device = evals.get('device', "cpu")
+
+        if new_model.device.type == device:
+            model = new_model
+        else:
+            model = new_model.to(device)
+
         for eval_config in evals.tasks:
             print(eval_config)
-            run_evaluation(model, tokenizer, **eval_config)
+            run_evaluation(model, tokenizer, device,**eval_config)
 
 
 
