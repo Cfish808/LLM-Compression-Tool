@@ -114,7 +114,7 @@ def main(config):
             model = new_model.to(device)
 
         for eval_config in evals.tasks:
-            print(eval_config)
+            eval_config = dict(eval_config)
             run_evaluation(model, tokenizer, device,**eval_config)
 
 
