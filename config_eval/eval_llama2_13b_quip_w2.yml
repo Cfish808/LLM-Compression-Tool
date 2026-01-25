@@ -43,18 +43,21 @@ quant:
       seqlen: 2048
       download: False
       path: /netcache/huggingface/c4_local/c4-train.00000-of-01024.json.gz
-      batch_size: 32
+      batch_size: 1
       seed: 42
 
 eval:
   device: cuda
   tasks:
     - task: ppl
-      datasets: [c4]   # PPL 数据集  [wikitext2, c4, ptb]
-      download: False
-      path: /netcache/huggingface/c4_local/c4-validation.00000-of-00008.json.gz
+      datasets: [wikitext2]   # PPL 数据集  [wikitext2, c4, ptb]
+      download: True
+      # datasets: [c4]   # PPL 数据集  [wikitext2, c4, ptb]
+      # download: False
+      # path: /netcache/huggingface/c4_local/c4-validation.00000-of-00008.json.gz
       seq_len: 2048
       batch_size: 32
       nsamples: all
       seqlen: 2048
-save: /netcache/zcx2/compress_models/llama2_13b/llama2_13b_quip_w2/
+      
+save: /netcache/zcx2/compress_models/llama2_13b/llama2_13b_quip_w2-2/

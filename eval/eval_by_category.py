@@ -141,11 +141,6 @@ def run_evaluation(
         total_acc = 0
         for task in datasets:
             logger.info(results['results'][task])
-            total_acc += results['results'][task]['acc,none']
-        logger.info(f'Average Acc: {total_acc / len(datasets) * 100:.2f}%')
-
-
-
 
 # def run_evaluation(
 #         model,

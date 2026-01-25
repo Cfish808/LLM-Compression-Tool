@@ -17,7 +17,8 @@ from quantization.efficientqat.int_linear_real import trans_e2e2llama_model, tra
 
 
 def get_model(config):
-    basemodel = BaseModel(config)
+    # basemodel = BaseModel(config)
+    basemodel = BaseModel(config,device_map=config.get("quant",{}).get("device",None))
     tokenizer = basemodel.build_tokenizer()
     model = basemodel.build_model()
     return model, tokenizer , basemodel

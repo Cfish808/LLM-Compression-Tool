@@ -52,25 +52,26 @@ base_model:
 # ============================================
 # 评测配置
 # ============================================
-eval:
-  device: cuda
-  tasks:
-    - task: ppl
-      datasets: [c4]   # PPL 数据集  [wikitext2, c4, ptb]
-      download: False
-      path: /netcache/huggingface/c4_local/c4-validation.00000-of-00008.json.gz
-      seq_len: 2048
-      batch_size: 32
-      nsamples: all
-      seqlen: 2048
-
 # eval:
 #   device: cuda
 #   tasks:
-#     - task: acc
-#       datasets: [winogrande, hellaswag, arc_easy, arc_challenge, piqa, social_iqa]
+#     - task: ppl
+#       datasets: [c4]   # PPL 数据集  [wikitext2, c4, ptb]
+#       download: False
+#       path: /netcache/huggingface/c4_local/c4-validation.00000-of-00008.json.gz
+#       seq_len: 2048
 #       batch_size: 32
-#       num_fewshot: 5    
+#       nsamples: all
+#       seqlen: 2048
+
+eval:
+  device: cuda
+  tasks:
+    - task: acc
+      # datasets: [nq_open, winogrande, hellaswag, arc_easy, arc_challenge, piqa, social_iqa]
+      datasets: [triviaqa, mmlu]
+      batch_size: 1
+      num_fewshot: 5    
 
 # ============================================
 # 保存路径 
