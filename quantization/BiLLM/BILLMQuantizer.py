@@ -243,7 +243,8 @@ class LinearBiLLMQuantizer(BaseQuantizer):
         if self.wbit in [Precision.FP16, Precision.FP32]:
             w = self.quant_hub_linear.core.weight.to(x.dtype).to(x.device)
         else:
-            w = self.fake_w.to(x.device)
+            # w = self.fake_w.to(x.device)
+            w = self.fake_w.to(x.dtype).to(x.device)
 
         bias = None if self.quant_hub_linear.core.bias is None else self.quant_hub_linear.core.bias.to(x.device)
         out = F.linear(x, w, bias)
