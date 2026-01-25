@@ -17,8 +17,7 @@ from quantization.efficientqat.int_linear_real import trans_e2e2llama_model, tra
 
 
 def get_model(config):
-    # basemodel = BaseModel(config)
-    basemodel = BaseModel(config,device_map=config.get("quant",{}).get("device",None))
+    basemodel = BaseModel(config)
     tokenizer = basemodel.build_tokenizer()
     model = basemodel.build_model()
     return model, tokenizer , basemodel
@@ -118,6 +117,8 @@ def main(config):
             print(eval_config)
             run_evaluation(model, tokenizer, device,**eval_config)
 
+
+
 def mkdirs(path):
     #
     if not os.path.exists(path):
@@ -134,9 +135,10 @@ if __name__ == '__main__':
     import os
 
     # 设置 HuggingFace 的缓存和镜像源
-    os.environ['HF_HOME'] = '/netcache/huggingface/'
-    os.environ['HF_DATASETS_CACHE'] = '/netcache/huggingface/datasets/'
+    os.environ['HF_HOME'] = './.huggingface'
+    os.environ['HF_DATASETS_CACHE'] = './.huggingface'
     os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+
 
     with open(args.config, 'r') as file:
         config = yaml.safe_load(file)
