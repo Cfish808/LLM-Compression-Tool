@@ -33,6 +33,37 @@ LLM Compression Tool is a project designed to optimize machine learning inferenc
 ## Introduction
 Although LLMs excel in various NLP tasks, their computational and memory demands may limit their deployment in real-time applications and on resource-constrained devices. This project addresses this challenge by employing quantization techniques to compress these models, ensuring they maintain performance while remaining adaptable to a wide range of scenarios. 
 
+### PTQ
+- [x] AWQ
+- [x] GPTQ
+- [x] SmoothQuant
+- [x] OmniQuant
+- [x] QuIP/QUIP#
+- [x] OWQ
+- [x] SpQR
+- [x] BiLLM
+- [x] RTN
+
+
+### QAT
+- [ ] QAT-LLM 海达
+- [x] EFFICIENTQAT 锦宇
+- [x] mix-precision QAT 锦宇
+
+### QAT + Low-rank 
+- [x] FBI-LLM
+- [x] QLoRA
+- [x] QA-LoRA
+- [x] IR-QLoRA
+- [x] OneBit
+
+### todo
+- 量化模型的浮点型保存：OmniQuant，QUIP#（无法从向量反推会浮点型），QAT-LLM，QAT + Low-rank
+- 基座模型推广，已完成llama, Qwen和部分deepseek模型，MOE架构的未完成
+- 校准数据集的优选
+- 部分评测任务缺失（Big-BenchHard(BBH), longbench_hotpotqa, CrowS-Pairs/BBO, truthfulga, IFEvaL）
+- 稀疏化
+- 评测
 
 ## Features
 - Support for various quantization algorithms, including:

@@ -124,7 +124,7 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                     layer.quantize()
                     layer.set_default_quantizer(0)
                     # del layer.core.weight
-                    if method in ["gptq", "rtn", "owq", "spqr", "billm", "smoothquant"]: layer.core.weight.data = layer.quantizer[0].fake_w
+                    if method != "awq": layer.core.weight.data = layer.quantizer[0].fake_w
                     else: layer.core.weight.data = layer.quantizer[0].fake_w.div(layer.quantizer[0].smooth_factor.view(1, -1))
                     layer.to(offload)
                     clear_mem()
