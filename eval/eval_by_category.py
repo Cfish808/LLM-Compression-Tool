@@ -15,17 +15,15 @@ from my_datasets import  get_calibrate_loader
 
 # === 任务分类 ===
 TASK_CATEGORIES: Dict[str, List[str]] = {
-    "Language_Modeling": [
-        "wikitext2",
-        "c4",
-        "ptb"
+    "Math": [
+        "mathqa",
+        "gsm8k",
     ],
-    "General_Knowledge": [
+    "WorldKnowledge": [
         "nq_open",
-        "triviaqa",
-        "mmlu",
+        "triviaqa"
     ],
-    "Commonsense_Reasoning": [
+    "CommonsenseReasoning": [
         "commonsense_qa",
         "piqa",
         "social_iqa",
@@ -33,21 +31,17 @@ TASK_CATEGORIES: Dict[str, List[str]] = {
         "winogrande",
         "arc_challenge",
         "arc_easy",
-    ],
-    "Complex_Reasoning": [
-        "bigbench_strategyqa",
         "openbookqa",
-        "mathqa",
-        "gsm8k",
-        "longbench_hotpotqa",
     ],
-    "Safety_Truthfulness": [
-        "truthfulqa",
-        "crows_pairs_english",
+    "Comprehension": [
+        "squadv2",
+        "boolq",
     ],
-    "Instruction_Following": [
-        "ifeval",
-    ],
+    "ppl": [
+        "wikitext2",
+        "c4",
+        "ptb"
+    ]
 }
 
 
@@ -143,6 +137,10 @@ def run_evaluation(
         total_acc = 0
         for task in datasets:
             logger.info(results['results'][task])
+            total_acc += results['results'][task]['acc,none']
+        logger.info(f'Average Acc: {total_acc / len(datasets) * 100:.2f}%')
+
+
 
 
 # def run_evaluation(
@@ -254,5 +252,6 @@ def evaluate_model(
         tasks=task_list,
         num_fewshot=num_fewshot,
         batch_size=batch_size,
+        task_manager=task_manager
     )
     return results
