@@ -7,3 +7,4 @@ utils/benchmark.py
 .idea
 /c4_local/
 __pycache__/
+config_eval/
