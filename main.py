@@ -107,19 +107,16 @@ def main(config):
             config.base_model.path = config.save
             new_model, tokenizer, _ = get_model(config)
         evals = config.eval
-        # 获取全局 device 设置
-        global_device = evals.get('device', "cpu")
-        model = new_model.to(global_device)
+        device = evals.get('device', "cpu")
+
+        if new_model.device.type == device:
+            model = new_model
+        else:
+            model = new_model.to(device)
+
         for eval_config in evals.tasks:
-            print(f"Running eval: {eval_config}")
-            eval_config['device'] = global_device
-            run_evaluation(model, tokenizer, **eval_config)
-
-        # model = new_model.to(evals.get('device', "cpu"))
-        # for eval_config in evals.tasks:
-        #     print(eval_config)
-        #     run_evaluation(model, tokenizer, **eval_config)
-
+            print(eval_config)
+            run_evaluation(model, tokenizer, device,**eval_config)
 
 def mkdirs(path):
     #
