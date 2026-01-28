@@ -34,6 +34,18 @@ class ModelArguments:
         default="main",
         metadata={"help": "The specific model version to use (can be a branch name, tag name or commit id)."}
     )
+    w_bits: Optional[int] = field(
+        default=None,
+        metadata={"help": "The number of bits to quantize the model."}
+    )
+    a_bits: Optional[int] = field(
+        default=None,
+        metadata={"help": "The number of bits to quantize the a."}
+    )
+    kv_bits: Optional[int] = field(
+        default=None,
+        metadata={"help": "The number of bits to quantize the kv."}
+    )
     quantization_bit: Optional[int] = field(
         default=None,
         metadata={"help": "The number of bits to quantize the model."}
