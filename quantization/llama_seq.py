@@ -124,8 +124,9 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
                     layer.quantize()
                     layer.set_default_quantizer(0)
                     # del layer.core.weight
-                    if method != "awq": layer.core.weight.data = layer.quantizer[0].fake_w
-                    else: layer.core.weight.data = layer.quantizer[0].fake_w.div(layer.quantizer[0].smooth_factor.view(1, -1))
+                    # if method != "awq": layer.core.weight.data = layer.quantizer[0].fake_w
+                    # else: layer.core.weight.data = layer.quantizer[0].fake_w.div(layer.quantizer[0].smooth_factor.view(1, -1))
+                    layer.core.weight.data = layer.quantizer[0].fake_w
                     layer.to(offload)
                     clear_mem()
                 del subset

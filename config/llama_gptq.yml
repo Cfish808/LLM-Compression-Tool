@@ -5,7 +5,7 @@ base_model:
     torch_dtype: torch.float16
     tokenizer_mode: fast
     device_map: auto
-quant_s:
+quant:
     method: gptq
     skip_layers: [ lm_head ]
     seqlen: 2048
