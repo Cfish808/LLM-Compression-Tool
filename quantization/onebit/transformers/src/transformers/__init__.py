@@ -2129,8 +2129,9 @@ else:
         ["LlamaForCausalLM", "LlamaForSequenceClassification", "LlamaModel", "LlamaPreTrainedModel"]
     )
     _import_structure["models.bitllama"].extend(
-        ["BitLlamaForCausalLM", "BitLlamaForCausalLMInf"]
+        ["BitLlamaForCausalLM", "BitLlamaForCausalLMInf", "QatLlamaForCausalLM"]
     )
+
     _import_structure["models.longformer"].extend(
         [
             "LONGFORMER_PRETRAINED_MODEL_ARCHIVE_LIST",
@@ -3234,6 +3235,7 @@ else:
     _import_structure["trainer_seq2seq"] = ["Seq2SeqTrainer"]
     # _import_structure["models.bit_models"] = ["BitLlamaForCausalLM"]
     _import_structure["models.bitnet"] = ["ClampSTE", "SignSTE", "BitLinear", "BitLinearInf"]
+    _import_structure["models.utils_quant"] = ["QuantizeLinear", "AsymQuantizer", "SymQuantizer"]
     
 
 # TensorFlow-backed objects
@@ -6068,6 +6070,7 @@ if TYPE_CHECKING:
         )
         from .models.llama import LlamaForCausalLM, LlamaForSequenceClassification, LlamaModel, LlamaPreTrainedModel
         from .models.bitllama import BitLlamaForCausalLM, BitLlamaForCausalLMInf
+        from .models.bitllama import QatLlamaForCausalLM
         from .models.longformer import (
             LONGFORMER_PRETRAINED_MODEL_ARCHIVE_LIST,
             LongformerForMaskedLM,

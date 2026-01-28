@@ -30,10 +30,10 @@ def main(config):
         if config.quant.method in ["qlora", "qalora","irlora"]:
             model,tokenizer = get_accelerate_model(config.base_model,config.quant.method)
             calibrate = make_data_module(tokenizer=tokenizer, args=config.quant.data)
-        elif config.quant.method == "onebit":
+        elif config.quant.method == "onebit" or config.quant.method == "qat-llm":
             from quantization.onebit.core import get_train_args
             model_args, data_args, training_args, finetuning_args = get_train_args(config.quant.args)
-            model,tokenizer = load_model_and_tokenizer(model_args,finetuning_args,training_args.do_train)
+            model,tokenizer = load_model_and_tokenizer(config.quant.method, model_args,finetuning_args,training_args.do_train)
             calibrate = get_dataset_loader(tokenizer=tokenizer, data_args=data_args, training_args=training_args)
         elif config.quant.method == "efficientqat_e2e":
             pass
@@ -77,7 +77,7 @@ def main(config):
             from quantization.qlora.qlora import train
             model = train(model=model,tokenizer=tokenizer,calibrate_data=calibrate, args=config.quant.args)
             new_model = model
-        elif config.quant.method == "onebit":
+        elif config.quant.method == "onebit" or config.quant.method == "qat-llm":
             from quantization.onebit.kd import run_kd
             model = run_kd(model=model,tokenizer=tokenizer,dataset=calibrate,model_args=model_args,data_args=data_args,training_args=training_args)
             new_model = model

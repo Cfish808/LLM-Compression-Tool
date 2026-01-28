@@ -51,6 +51,9 @@ else:
     _import_structure["modeling_bitllama"] = [
         "BitLlamaForCausalLM", "BitLlamaForCausalLMInf",
     ]
+    _import_structure["modeling_qatllama"] = [
+        "QatLlamaForCausalLM",
+    ]
 
 
 if TYPE_CHECKING:
@@ -79,6 +82,7 @@ if TYPE_CHECKING:
         pass
     else:
         from .modeling_bitllama import BitLlamaForCausalLM, BitLlamaForCausalLMInf
+        from .modeling_qatllama import QatLlamaForCausalLM
 
 
 else:

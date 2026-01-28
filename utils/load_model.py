@@ -545,7 +545,7 @@ def prepare_model_for_training(
     return model
 
 
-def load_model_and_tokenizer(model_args,finetuning_args,is_trainable: Optional[bool] = False):
+def load_model_and_tokenizer(method, model_args,finetuning_args,is_trainable: Optional[bool] = False):
     r"""
     Loads pretrained model and tokenizer.
     Support both training and inference.
@@ -570,6 +570,11 @@ def load_model_and_tokenizer(model_args,finetuning_args,is_trainable: Optional[b
 
     model_to_load = model_args.model_name_or_path
     config = AutoConfig.from_pretrained(model_to_load, **config_kwargs)
+
+    # qat-llm quantization parameter
+    config.w_bits = model_args.w_bits
+    config.a_bits = model_args.a_bits
+    config.kv_bits = model_args.kv_bits
 
     # Fix tokenizer (for ChatGLM2)
     if getattr(config, "model_type", None) == "chatglm":
@@ -625,17 +630,29 @@ def load_model_and_tokenizer(model_args,finetuning_args,is_trainable: Optional[b
    
     # from Xu Yuzhuang
     from transformers import BitLlamaForCausalLM
+    from transformers import QatLlamaForCausalLM
+
     try:
         from transformers.integrations import is_deepspeed_zero3_enabled
     except ImportError: # https://github.com/huggingface/transformers/releases/tag/v4.33.1
         from transformers.deepspeed import is_deepspeed_zero3_enabled
-    model = BitLlamaForCausalLM.from_pretrained(
-        model_to_load,
-        config=config,
-        torch_dtype=model_args.compute_dtype,
-        low_cpu_mem_usage=(not is_deepspeed_zero3_enabled()),
-        **config_kwargs
-    )
+
+    if method == "onebit":
+        model = BitLlamaForCausalLM.from_pretrained(
+            model_to_load,
+            config=config,
+            torch_dtype=model_args.compute_dtype,
+            low_cpu_mem_usage=(not is_deepspeed_zero3_enabled()),
+            **config_kwargs
+        )
+    else:
+        model = QatLlamaForCausalLM.from_pretrained(
+            model_to_load,
+            config=config,
+            torch_dtype=model_args.compute_dtype,
+            low_cpu_mem_usage=(not is_deepspeed_zero3_enabled()),
+            **config_kwargs
+        )
     
     assert model_args.teacher_model_name_or_path is not None, "teacher model path is None!"
     teacher_config = AutoConfig.from_pretrained(model_args.teacher_model_name_or_path, **config_kwargs)
