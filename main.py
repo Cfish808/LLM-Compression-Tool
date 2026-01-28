@@ -115,17 +115,26 @@ def main(config):
 
         for eval_config in evals.tasks:
             print(eval_config)
-            run_evaluation(model, tokenizer, device,**eval_config)
+            # 合并 eval 层级的全局参数和 task 层级的参数
+            # task 层级参数优先级更高
+            merged_config = {}
+            # 添加 eval 层级的参数（排除 tasks 和 device）
+            for key, value in evals.items():
+                if key not in ['tasks', 'device']:
+                    merged_config[key] = value
+            # 用 task 层级参数覆盖（优先级更高）
+            merged_config.update(eval_config)
+            run_evaluation(model, tokenizer, device, **merged_config)
 
 
 
 def mkdirs(path):
-    #
     if not os.path.exists(path):
         os.makedirs(path)
 
 
 if __name__ == '__main__':
+    logger.remove()
     logger.add(sys.stdout, level='INFO')
     llmc_start_time = time.time()
     parser = argparse.ArgumentParser()

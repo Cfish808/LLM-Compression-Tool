@@ -1,5 +1,7 @@
 # run_eval_by_category.py
+import json
 import logging
+from pathlib import Path
 from typing import Dict, List, Optional, Iterable
 
 import lm_eval
@@ -7,6 +9,7 @@ import numpy as np
 import torch
 from lm_eval import evaluator
 from lm_eval.models.huggingface import HFLM
+from lm_eval.utils import make_table
 from loguru import logger
 from sympy.strategies.core import switch
 from tqdm import tqdm
@@ -113,10 +116,10 @@ def compute_ppl(model, tokenizer, loader,**kwargs):
 #     return ppl
 
 def eval_ppl(model, tokenizer,data_name,**kwargs):
-    logging.info(f"Evaluating Perplexity (PPL) on the {data_name}")
+    logger.info(f"Evaluating Perplexity (PPL) on the {data_name}")
     dataloader = get_calibrate_loader(tokenizer,data_name,**kwargs)
     ppl = compute_ppl(model, tokenizer, dataloader)
-    logging.info(f'{data_name} PPL {ppl}')
+    logger.info(f'{data_name} PPL {ppl}')
     return ppl
 
 def run_evaluation(
@@ -134,8 +137,40 @@ def run_evaluation(
 
     elif task == "acc":
         results = evaluate_model(model=model, tokenizer=tokenizer, task_list=datasets, device=device,**kwargs)
-        for task in datasets:
-            logger.info(results['results'][task])
+
+        # === 打印美观的表格结果 ===
+        logger.info("\n" + "="*80)
+        logger.info("Evaluation Results:")
+        logger.info("="*80)
+        table = make_table(results)
+        logger.info(f"\n{table}")
+        logger.info("="*80 + "\n")
+
+        # # 同时也打印每个任务的原始结果（保留原有的行为）
+        # for task in datasets:
+        #     logger.info(results['results'][task])
+
+        # === 保存样本结果 ===
+        if results.get('samples'):
+            # 获取样本保存路径，优先使用配置中的 sample_output_path
+            sample_output_path = kwargs.get('sample_output_path', None)
+            if sample_output_path is None:
+                # 如果没有配置 sample_output_path，使用 save 目录下的 samples 子目录
+                save_dir = kwargs.get('save', None)
+                if save_dir:
+                    sample_output_path = str(Path(save_dir) / 'samples')
+                else:
+                    # 默认保存在当前目录下的 Eval_samples
+                    sample_output_path = './Eval_samples'
+
+            sample_dir = Path(sample_output_path)
+            sample_dir.mkdir(parents=True, exist_ok=True)
+
+            for task_name, task_samples in results['samples'].items():
+                output_file = sample_dir / f"{task_name}_samples.json"
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    json.dump(task_samples, f, indent=2, ensure_ascii=False)
+                logger.info(f"Saved {len(task_samples)} samples for '{task_name}' to {output_file}")
 
 
 # def run_evaluation(
@@ -242,11 +277,19 @@ def evaluate_model(
     lm = _wrap_hflm(model, tokenizer, batch_size=batch_size, device=device,**kwargs)
 
     # 3) 调用 lm_eval 进行评测
+    # 提取额外的评测参数
+    limit = kwargs.get('limit', None)
+    log_samples = kwargs.get('log_samples', False)
+    gen_kwargs = kwargs.get('gen_kwargs', None)
+
     results = evaluator.simple_evaluate(
         model=lm,
         tasks=task_list,
         num_fewshot=num_fewshot,
         batch_size=batch_size,
-        task_manager=task_manager
+        task_manager=task_manager,
+        limit=limit,
+        log_samples=log_samples,
+        gen_kwargs=gen_kwargs
     )
     return results
