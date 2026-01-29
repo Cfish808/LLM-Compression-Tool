@@ -59,6 +59,9 @@ class QuantLinear(nn.Module):
         if self.use_act_quant and not self.disable_input_quant:
             input = self.act_quantizer(input)
             
+        if input.dtype != weight.dtype:
+            input = input.to(weight.dtype)
+
         out = self.fwd_func(input, weight, bias, **self.fwd_kwargs)
 
 

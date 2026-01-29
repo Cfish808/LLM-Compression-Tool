@@ -11,19 +11,33 @@ from eval.eval_by_category import run_evaluation
 from my_datasets import get_calibrate_loader,make_data_module,get_dataset_loader
 from quantization.layers import LinearQuantHub
 from quantization.llama_seq import llama_sequential, llama_omniquant
+from quantization.qwen_seq import qwen_sequential 
+from quantization.deepseek_seq import deepseek_sequential, deepseek_omniquant
 from utils.load_model import BaseModel, get_accelerate_model, load_model_and_tokenizer
 from quantization.efficientqat.block_ap import block_ap, get_loaders
 from quantization.efficientqat.int_linear_real import trans_e2e2llama_model, trans_blockwise2llama_model
 
 
 def get_model(config):
-    basemodel = BaseModel(config)
+    basemodel = BaseModel(config, device_map=config.get("quant",{}).get("device",None))
     tokenizer = basemodel.build_tokenizer()
     model = basemodel.build_model()
     return model, tokenizer , basemodel
 
 
 def main(config):
+    SEQUENTIAL_COMPRESSION_MAP = {
+        "llama": llama_sequential,
+        "qwen": qwen_sequential,
+        "deepseek": deepseek_sequential,
+    }
+    OMNIQUANT_COMPRESSION_MAP = {
+        "llama": llama_omniquant,
+        "deepseek": deepseek_omniquant,
+    }
+    compression_func = SEQUENTIAL_COMPRESSION_MAP[config.base_model.type.lower()]
+    logger.info(f"sequential compression_func: {compression_func.__name__}")
+    
     new_model = None
     if config.get("quant", False):
 
@@ -43,11 +57,22 @@ def main(config):
 
 
         if config.quant.method == "omniquant":
-            model = llama_omniquant(config.base_model.path, model, calibrate, config.quant, logger=logger)
+            omniquant_compression_func = OMNIQUANT_COMPRESSION_MAP[config.base_model.type.lower()]
+            model = omniquant_compression_func(config.base_model.path, model, calibrate, config.quant, logger=logger)
             new_model = model
+            logger.info(f"omniquant compression_func: {omniquant_compression_func.__name__}")
         elif config.quant.method == "quip_sharp":
             from quantization.llama_seq import llama_quipsharp
-            model = llama_quipsharp(calibrate,config)
+            from quantization.qwen_seq import qwen_quipsharp
+            from quantization.deepseek_seq import deepseek_quipsharp
+            QUIP_SHARP_COMPRESSION_MAP = {
+                "llama": llama_quipsharp,
+                "qwen": qwen_quipsharp,
+                "deepseek": deepseek_quipsharp,
+            }
+            quip_sharp_compression_func = QUIP_SHARP_COMPRESSION_MAP[config.base_model.type.lower()]
+            logger.info(f"quip_sharp compression_func: {quip_sharp_compression_func.__name__}")
+            model = quip_sharp_compression_func(calibrate,config)
             new_model = model
         elif config.quant.method == "fbi_llm":
             from quantization.fbi_llm.fbi_train import train_fbi
@@ -83,7 +108,7 @@ def main(config):
             new_model = model
         else:
             new_model = basemodel.replace_module(model, exclude_layers=config.quant.skip_layers, include_layers=['.*'])
-            new_model = llama_sequential(model=new_model, calibrate_data=calibrate, **config.quant)
+            new_model = compression_func(model=new_model, calibrate_data=calibrate, **config.quant)
             logger.info(f'model: {model}')
             logger.info(f'tokenizer: {tokenizer}')
 

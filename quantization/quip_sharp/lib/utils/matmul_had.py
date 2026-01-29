@@ -1,8 +1,22 @@
 import fast_hadamard_transform
 import torch
-
+import math
+from functools import lru_cache
 from quantization.quip_sharp.lib import utils
 
+
+@lru_cache(maxsize=None)
+def get_general_hadK(K: int) -> torch.Tensor:
+    # DCT-II 正交基 Q，满足 Q@Q.T = I
+    # 再乘 sqrt(K)，让 hadK@hadK.T = K I，匹配你现有缩放设计
+    n = torch.arange(K, dtype=torch.float32).unsqueeze(0)
+    k = torch.arange(K, dtype=torch.float32).unsqueeze(1)
+    mat = torch.cos((math.pi / K) * (n + 0.5) * k)
+    mat[0] *= math.sqrt(1.0 / K)
+    if K > 1:
+        mat[1:] *= math.sqrt(2.0 / K)
+    mat *= math.sqrt(K)
+    return mat
 
 def get_hadK(n, transpose=False):
     hadK, K = None, None
@@ -55,8 +69,16 @@ def get_hadK(n, transpose=False):
         K = 12
         hadK = get_had12().T if transpose else get_had12()
     else:
-        assert (is_pow2(n))
-        K = 1
+        # assert (is_pow2(n))
+        # K = 1
+        if is_pow2(n):
+            K = 1
+        else:
+            p2 = n & -n
+            K = n // p2
+            assert is_pow2(n // K)
+            hadK0 = get_general_hadK(K)
+            hadK = hadK0.T if transpose else hadK0
 
     return hadK, K
 

@@ -1,0 +1,52 @@
+base_model:
+    type: Qwen
+    path: /home/ybh/models/Qwen2.5-7B-Instruct
+    torch_dtype: auto
+    tokenizer_mode: fast
+quant:
+    method: billm
+    skip_layers: [ lm_head ]
+    seqlen: 2048
+    device: cuda
+    weight:
+      wbit: 1
+      #abit: Precision.FP16
+      salient_metric: hessian
+      disable_gptq: False
+      offload: cpu
+      block_sequential: True
+      layer_sequential: True
+      w_qtype: per_group
+      groupsize: 128
+      blocksize: 128
+      percdamp: 0.01
+      actorder: False
+      order: 2
+
+    data:
+      name: c4
+      nsamples: 128
+      seqlen: 2048
+      download: True
+      path: eval data path
+      batch_size: 1
+      seed: 42
+
+
+eval:
+#    eval_pos: [pretrain, fake_quant]
+    tasks: [ppl,CommonsenseReasoning]
+    datasets: [c4,arc_easy]
+    download: True
+    path: eval data path
+    seq_len: 2048
+    group_size: 128
+    batch_size: 32
+    num_fewshot: 0
+    nsamples: all
+    device: cuda
+    seqlen: 2048
+    # For 7B / 13B model eval, bs can be set to "1", and inference_per_block can be set to "False".
+    # For 70B model eval, bs can be set to "20", and inference_per_block can be set to "True".
+    bs: 1
+save: /home/ybh/output/qwen2_7b_billm

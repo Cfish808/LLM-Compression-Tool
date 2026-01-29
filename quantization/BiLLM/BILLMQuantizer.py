@@ -247,6 +247,8 @@ class LinearBiLLMQuantizer(BaseQuantizer):
             w = self.fake_w.to(x.dtype).to(x.device)
 
         bias = None if self.quant_hub_linear.core.bias is None else self.quant_hub_linear.core.bias.to(x.device)
+        if bias is not None and bias.dtype != x.dtype:
+            bias = bias.to(x.dtype)
         out = F.linear(x, w, bias)
         return out.to(origin_dtype)
 
