@@ -15,7 +15,7 @@ quant:
     hessian_path: /home/ybh/output/hessians/qwen2.5-7b
     hf_path: /home/ybh/output/outputs_q_hf/qwen2.5-7b
     hf_ft_path: /home/ybh/output/outputs_q_hf_ft_hf/qwen2.5-7b
-    enable_hessian: false
+    enable_hessian: true
     enable_quantize: true
     enable_finetune: true
     enable_hfize: true

@@ -2,6 +2,7 @@
 import transformers
 
 from quantization.quip_sharp.model.llama import LlamaForCausalLM
+from quantization.quip_sharp.model.qwen import Qwen2ForCausalLM
 
 from . import graph_wrapper
 
@@ -24,6 +25,10 @@ def model_from_hf_path(path,
             model_str = transformers.LlamaConfig.from_pretrained(
                 path)._name_or_path
             model_cls = LlamaForCausalLM
+        elif model_type == 'qwen2':
+            model_str = transformers.Qwen2Config.from_pretrained(
+                path)._name_or_path
+            model_cls = Qwen2ForCausalLM
         else:
             raise Exception
     else:
