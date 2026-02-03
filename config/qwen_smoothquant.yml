@@ -1,0 +1,52 @@
+base_model:
+    type: Qwen
+    # path: /home/ybh/models/Qwen2.5-7B-Instruct
+    path: /home/ybh/models/Qwen3-30B-A3B-Instruct-2507
+    torch_dtype: auto
+    tokenizer_mode: slow
+quant:
+    method: smoothquant
+    skip_layers: [ lm_head ]
+    seqlen: 2048
+    device: cuda
+    weight:
+      wbit: 8
+      abit: 8
+      offload: cpu
+      block_sequential: False
+      layer_sequential: False
+      w_groupsize: 128 
+      w_qtype: per_channel
+      a_qtype: per_token
+      alpha: 0.85
+      quant_out: False
+    data:
+      name: c4
+      nsamples: 1
+      seqlen: 2048
+      download: True
+      path: eval data path
+      batch_size: 1
+      seed: 42
+      split: train
+eval:
+#    eval_pos: [pretrain, fake_quant]
+    device: cuda
+    tasks: [
+      {
+        task: ppl,
+        datasets: [c4],
+        download: True,
+        path: eval data path,
+        seq_len: 2048 ,
+        batch_size: 32 ,
+        num_fewshot: 0,
+        nsamples: all,
+        seqlen: 2048,
+        # For 7B / 13B model eval, bs can be set to "1", and inference_per_block can be set to "False".
+        # For 70B model eval, bs can be set to "20", and inference_per_block can be set to "True".
+        bs: 1,
+      }
+    ]
+# save: /home/ybh/output/qwen2_7b_smoothquant
+save: /home/ybh/output/qwen3_30b_smoothquant
