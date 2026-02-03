@@ -145,12 +145,12 @@ def main(config):
 
 
 def mkdirs(path):
-    #
     if not os.path.exists(path):
         os.makedirs(path)
 
 
 if __name__ == '__main__':
+    logger.remove()
     logger.add(sys.stdout, level='INFO')
     llmc_start_time = time.time()
     parser = argparse.ArgumentParser()
