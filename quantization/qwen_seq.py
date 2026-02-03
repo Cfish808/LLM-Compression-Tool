@@ -21,7 +21,7 @@ from utils.memory import clear_mem
 
 
 @torch.no_grad()
-def llama_sequential(model, method, calibrate_data, **kwargs):
+def qwen_sequential(model, method, calibrate_data, **kwargs):
     device = kwargs.get('device', 'cuda')
     offload = kwargs["weight"].get('offload', 'cpu')
     block_sequential = kwargs["weight"].get('block_sequential', False)
@@ -76,7 +76,7 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
             if hasattr(layers[i], "_hf_hook"):
                 from accelerate.hooks import remove_hook_from_module
                 remove_hook_from_module(layers[i], recurse=True)
-            
+                
             block = layers[i].to(device)
             if not block_sequential:
                 for j in range(len(calibrate_data)):
@@ -152,32 +152,7 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
     return model
 
 
-def llama_omniquant(model_name_or_path, model, calibrate_data, quant_config, logger=None):
-    act_scales, act_shifts = generate_act_scale_shift(
-        model=model,
-        calibrate_data=calibrate_data,
-    )
-    logger.info("act_scales, act_shifts generated")
-    seqlen = quant_config.seqlen
-    weight_config = quant_config.weight
-    nsamples = quant_config.data.nsamples
-    seed = quant_config.data.seed
-    model = omni_quantize(
-        model_name_or_path=model_name_or_path, 
-        model=model, 
-        act_scales=act_scales, 
-        act_shifts=act_shifts, 
-        nsamples=nsamples,
-        seqlen=seqlen,
-        seed=seed,
-        dataloader=calibrate_data,
-        logger=logger,
-        **weight_config
-    )
-    return model
-
-
-def llama_quipsharp(calibrate,kwargs):
-    from quantization.quip_sharp.quantize_llama.complete_quantize_finetune_llama import quip_sharp_main
+def qwen_quipsharp(calibrate,kwargs):
+    from quantization.quip_sharp.quantize_qwen.complete_quantize_finetune_qwen import quip_sharp_main
     return quip_sharp_main(calibrate,kwargs)
 

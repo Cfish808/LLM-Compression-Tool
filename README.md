@@ -46,19 +46,19 @@ Although LLMs excel in various NLP tasks, their computational and memory demands
 
 
 ### QAT
-- [ ] QAT-LLM 海达
+- [x] QAT-LLM 海达 转 锦宇
 - [x] EFFICIENTQAT 锦宇
 - [x] mix-precision QAT 锦宇
 
 ### QAT + Low-rank 
 - [x] FBI-LLM
 - [x] QLoRA
-- [x] QA-LoRA
+- [x] QA-LoRA 志炀，新增中间模型格式转换的功能
 - [x] IR-QLoRA
 - [x] OneBit
 
 ### todo
-- 量化模型的浮点型保存：OmniQuant，QUIP#（无法从向量反推会浮点型），QAT-LLM，QAT + Low-rank
+- 量化模型的浮点型保存：OmniQuant，QUIP#（无法从向量反推会浮点型），QAT-LLM和onebit未完成
 - 基座模型推广，已完成llama, Qwen和部分deepseek模型，MOE架构的未完成
 - 校准数据集的优选
 - 部分评测任务缺失（Big-BenchHard(BBH), longbench_hotpotqa, CrowS-Pairs/BBO, truthfulga, IFEvaL）

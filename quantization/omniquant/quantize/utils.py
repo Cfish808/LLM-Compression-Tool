@@ -94,7 +94,8 @@ def smooth_and_quant_temporary(model, args, isllama):
     for name, module in model.named_modules():
         if isinstance(module, QuantLinear):
             if hasattr(module, "temp_weight"):
-                module.temp_weight = module.weight_quantizer(module.temp_weight)
+                qw = module.weight_quantizer(module.temp_weight)
+                module.temp_weight.data.copy_(qw)
             else:
                 module.temp_weight = module.weight_quantizer(module.weight)
             if not hasattr(module, "temp_bias"):
