@@ -16,6 +16,8 @@ from quantization.BiLLM.BILLMQuantizer import LinearBiLLMQuantizer
 from quantization.spqr.SPQRQuantizer import LinearSPQRQuantizer
 from quantization.layers import LinearQuantHub
 from transformers.models.qwen2.modeling_qwen2 import Qwen2RotaryEmbedding # for transformers>=4.51
+from packaging import version
+import transformers
 
 from utils.load_model import find_layers
 from utils.memory import clear_mem
@@ -83,10 +85,19 @@ def qwen_sequential(model, method, calibrate_data, **kwargs):
             block = layers[i].to(device)
             if not block_sequential:
                 for j in range(len(calibrate_data)):
-                    fp_outputs[j] = block(inputs[j].to(device),
-                                          attention_mask=attention_mask[j] if attention_mask[j] == None else
-                                          attention_mask[j].to(device), position_ids=position_ids[j].to(device))[0].to(
-                        offload)
+                    if version.parse(transformers.__version__) < version.parse('4.51.0'):
+                        fp_outputs[j] = block(inputs[j].to(device),
+                                            attention_mask=attention_mask[j] if attention_mask[j] == None else
+                                            attention_mask[j].to(device), position_ids=position_ids[j].to(device))[0].to(
+                            offload)
+                    else:
+                        inputs_embeds = embed_layer(calibrate_data[j]).to(device)  
+                        position_embeddings = rotary_emb(inputs_embeds, position_ids[j].to(device))
+                        fp_outputs[j] = block(inputs[j].to(device),
+                                            attention_mask=attention_mask[j] if attention_mask[j] == None else
+                                            attention_mask[j].to(device), position_ids=position_ids[j].to(device), position_embeddings=position_embeddings)[0].to(
+                            offload)
+                        
             layer_linear = find_layers(block, (LinearQuantHub))
             if layer_sequential:
                 sequential = [
@@ -123,10 +134,10 @@ def qwen_sequential(model, method, calibrate_data, **kwargs):
                     layer.prepare_hook()
 
                 for j in range(len(calibrate_data)):
-                    try:
+                    if version.parse(transformers.__version__) < version.parse('4.51.0'):
                         _ = block(inputs[j].to(device), attention_mask=attention_mask[j].to(device) if attention_mask[j] != None else None,
                                 position_ids=position_ids[j].to(device))[0].to(offload)
-                    except:
+                    else:
                         inputs_embeds = embed_layer(calibrate_data[j]).to(device)  
                         position_embeddings = rotary_emb(inputs_embeds, position_ids[j].to(device))
                         _ = block(inputs[j].to(device), attention_mask=attention_mask[j].to(device) if attention_mask[j] != None else None,
@@ -145,10 +156,10 @@ def qwen_sequential(model, method, calibrate_data, **kwargs):
 
             if block_sequential:
                 for j in range(len(calibrate_data)):
-                    try:
+                    if version.parse(transformers.__version__) < version.parse('4.51.0'):
                         quant_outputs[j] = block(inputs[j].to(device), attention_mask=attention_mask[j].to(device) if attention_mask[j] != None else None,
                                                 position_ids=position_ids[j].to(device))[0].to(offload)
-                    except:
+                    else:
                         inputs_embeds = embed_layer(calibrate_data[j]).to(device)  
                         position_embeddings = rotary_emb(inputs_embeds, position_ids[j].to(device))
                         quant_outputs[j] = block(inputs[j].to(device), attention_mask=attention_mask[j].to(device) if attention_mask[j] != None else None,
