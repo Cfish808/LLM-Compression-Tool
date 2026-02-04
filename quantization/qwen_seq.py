@@ -38,8 +38,10 @@ def qwen_sequential(model, method, calibrate_data, **kwargs):
         model.model.embed_tokens = model.model.embed_tokens.to(device)
         model.model.norm = model.model.norm.to(device)
         layers[0] = layers[0].to(device)
-        rotary_emb = Qwen2RotaryEmbedding(model.config)
-        embed_layer = model.get_input_embeddings()   # nn.Embedding
+        
+        if version.parse(transformers.__version__) >= version.parse('4.51.0'):
+            rotary_emb = Qwen2RotaryEmbedding(model.config)
+            embed_layer = model.get_input_embeddings()   # nn.Embedding
 
         dtype = next(iter(model.parameters())).dtype
 
