@@ -46,9 +46,9 @@ Although LLMs excel in various NLP tasks, their computational and memory demands
 
 
 ### QAT
-- [x] QAT-LLM 海达 转 锦宇
-- [x] EFFICIENTQAT 锦宇
-- [x] mix-precision QAT 锦宇
+- [x] QAT-LLM 
+- [x] EFFICIENTQAT 
+- [x] mix-precision QAT 
 
 ### QAT + Low-rank 
 - [x] FBI-LLM
@@ -58,12 +58,12 @@ Although LLMs excel in various NLP tasks, their computational and memory demands
 - [x] OneBit
 
 ### todo
-- 量化模型的浮点型保存：OmniQuant，QUIP#（无法从向量反推会浮点型），QAT-LLM和onebit未完成
-- 基座模型推广，已完成llama, Qwen和部分deepseek模型，MOE架构的未完成
-- 校准数据集的优选
-- 部分评测任务缺失（Big-BenchHard(BBH), longbench_hotpotqa, CrowS-Pairs/BBO, truthfulga, IFEvaL）
-- 稀疏化
-- 评测
+- 量化模型的浮点型保存 done
+- 基座模型推广，已完成llama, Qwen和部分deepseek模型 done
+- 校准数据集的优选 doing
+- 部分评测任务缺失:longbench_hotpotqa，后续会加入整个longbench的测试
+- 稀疏化 未开始
+- 评测 doing
 
 ## Features
 - Support for various quantization algorithms, including:
@@ -82,8 +82,8 @@ Although LLMs excel in various NLP tasks, their computational and memory demands
   - [x] QA-LoRA 志炀
   - [x] IR-QLoRA 博翰
   - [x] FBI-LLM 志炀
-  - [ ] OneBit
-  - [ ] mix-precision QAT
+  - [x] OneBit
+  - [x] mix-precision QAT
   - [ ] Joint Sparsification and
 Quantization (JSQ)
   - [ ] GPTQ + AWQ
