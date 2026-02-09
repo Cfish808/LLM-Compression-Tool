@@ -1,0 +1,62 @@
+
+base_model:
+    type: Qwen
+    path: /home/ybh/models/Qwen2.5-7B-Instruct
+    torch_dtype: auto
+    tokenizer_mode: fast
+    device_map: auto
+quant:
+    method: awq+gptq
+    skip_layers: [ lm_head ]
+    seqlen: 2048
+    device: cuda
+    weight:
+      wbit: 3
+      abit: 16
+      offload: cpu
+      block_sequential: True
+      layer_sequential: True
+      w_qtype: per_group
+      groupsize: 128
+      blocksize: 128
+      w_has_zero: True
+      w_unsign: True
+      auto_scale: True
+      auto_clip: True
+      percdamp: 0.01
+      actorder: False
+    special:
+      actorder: True
+      static_groups: False
+      percdamp: 0.01
+      blocksize: 128
+      true_sequential: True
+    data:
+      name: c4
+      nsamples: 128
+      seqlen: 2048
+      download: False
+      path: /netcache/huggingface/c4_local/c4-train.00000-of-01024.json.gz
+      batch_size: 32
+      split: train
+      seed: 42
+#      datakey:
+# datakey: field name of raw text in the dataset (e.g., "text" for C4/Wiki, "sentence" for PTB)
+
+
+eval:
+  device: cuda
+  tasks: [
+    {
+      task: ppl ,
+      datasets: [c4] ,
+      download: False,
+      path: /netcache/huggingface/c4_local/c4-validation.00000-of-00008.json.gz,
+      seq_len: 2048,
+      batch_size: 32,
+      num_fewshot: 5,
+      nsamples: all,
+      seqlen: 2048
+    }
+  ]
+save: /home/yejinyu/llama2_7b/output/llama27b_awqgptq
