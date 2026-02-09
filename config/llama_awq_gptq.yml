@@ -11,7 +11,7 @@ quant:
     seqlen: 2048
     device: cuda
     weight:
-      wbit: 2
+      wbit: 3
       abit: 16
       offload: cpu
       block_sequential: True
