@@ -174,8 +174,7 @@ if __name__ == '__main__':
 
 
     if config.get("save"):
-        save_fake_path = os.path.join(config.save, 'output_models')
-        mkdirs(save_fake_path)
+        mkdirs(config.save)
 
     # Synchronize all processes after directory creation
     # dist.barrier()
