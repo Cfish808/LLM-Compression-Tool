@@ -173,8 +173,9 @@ if __name__ == '__main__':
     logger.info(f'config:\n{json.dumps(config, ensure_ascii=False, indent=4)}')
 
 
-    save_fake_path = os.path.join(config.save, 'output_models')
-    mkdirs(save_fake_path)
+    if config.get("save"):
+        save_fake_path = os.path.join(config.save, 'output_models')
+        mkdirs(save_fake_path)
 
     # Synchronize all processes after directory creation
     # dist.barrier()
