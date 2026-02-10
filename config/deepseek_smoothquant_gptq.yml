@@ -1,0 +1,56 @@
+base_model:
+    type: deepseek
+    path: /home/ybh/models/deepseek-llm-7b-chat
+    torch_dtype: torch.float16
+    tokenizer_mode: fast
+quant:
+    method: smoothquant+gptq
+    skip_layers: [ lm_head ]
+    seqlen: 2048
+    device: cuda
+    weight:
+      wbit: 3
+      abit: 16
+      offload: cpu
+      block_sequential: False
+      layer_sequential: False
+      w_groupsize: 128 
+      w_qtype: per_channel
+      a_qtype: per_token
+      alpha: 0.85
+      groupsize: 128
+      blocksize: 128
+      percdamp: 0.01
+      actorder: False
+      quant_out: False
+    special:
+      actorder: True
+      static_groups: False
+      percdamp: 0.01
+      blocksize: 128
+      true_sequential: True
+    data:
+      name: wikitext2
+      nsamples: 128
+      seqlen: 2048
+      download: True
+      path: eval data path
+      batch_size: 32
+      seed: 42
+eval:
+  device: cuda
+  tasks: [
+    {
+      task: ppl ,
+      datasets: [wikitext2,c4],
+      download: False,
+      path: /netcache/huggingface/c4_local/c4-validation.00000-of-00008.json.gz,
+      seq_len: 2048,
+      batch_size: 1,
+      num_fewshot: 0,
+      nsamples: all,
+      seqlen: 2048
+    }
+  ]
+
+save: /ssd/yejinyu/LLM-Compression-Tool/quant_output/llama2_7b/smoothquant
