@@ -7,6 +7,7 @@ import yaml
 from easydict import EasyDict
 from loguru import logger
 
+from transformers import BitLlamaForCausalLM, QatLlamaForCausalLM, AutoTokenizer
 from eval.eval_by_category import run_evaluation
 from my_datasets import get_calibrate_loader,make_data_module,get_dataset_loader
 from quantization.layers import LinearQuantHub
@@ -129,7 +130,14 @@ def main(config):
     if config.get("eval", False):
         if new_model is None:
             config.base_model.path = config.save
-            new_model, tokenizer, _ = get_model(config)
+            if config.method == "onebit":
+                new_model = BitLlamaForCausalLM.from_pretrained(config.base_model.path)
+                tokenizer = AutoTokenizer.from_pretrained(config.base_model.path, use_fast=False)
+            elif config.methed == "qat-llm":
+                new_model = QatLlamaForCausalLM.from_pretrained(config.base_model.path)
+                tokenizer = AutoTokenizer.from_pretrained(config.base_model.path, use_fast=False)
+            else:
+                new_model, tokenizer, _ = get_model(config)
         evals = config.eval
         device = evals.get('device', "cpu")
 
