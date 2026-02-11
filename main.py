@@ -1,3 +1,4 @@
+import os
 import argparse
 import json
 import sys
@@ -17,6 +18,7 @@ from quantization.deepseek_seq import deepseek_sequential, deepseek_omniquant
 from utils.load_model import BaseModel, get_accelerate_model, load_model_and_tokenizer
 from quantization.efficientqat.block_ap import block_ap, get_loaders
 from quantization.efficientqat.int_linear_real import trans_e2e2llama_model, trans_blockwise2llama_model
+from sparse.lib.prune import prune_wanda, prune_magnitude, prune_sparsegpt, prune_ablate, check_sparsity
 
 
 def get_model(config):
@@ -55,7 +57,33 @@ def main(config):
         else:
             model, tokenizer, basemodel = get_model(config)
             calibrate = get_calibrate_loader(tokenizer=tokenizer, **config.quant.data)
-
+        
+        if config.get("sparse", False):
+            # Handling n:m sparsity
+            prune_n, prune_m = 0, 0
+            device = model.device
+            model.seqlen = config.quant.seqlen
+            if config.sparse.sparsity_type != "unstructured":
+                assert config.sparse.sparsity_ratio == 0.5, "sparsity ratio must be 0.5 for structured N:M sparsity"
+                logger.info(f"sparse config: {config.sparse}")
+                logger.info(f"sparsity type: {config.sparse.sparsity_type}")
+                prune_n, prune_m = map(int, config.sparse.sparsity_type.split(":"))
+            
+            if config.sparse.sparsity_ratio != 0:
+                logger.info("pruning starts")
+                if config.sparse.method == "wanda":
+                    prune_wanda(config.sparse, calibrate, model, tokenizer, device, prune_n=prune_n, prune_m=prune_m)
+                elif config.sparse.method == "magnitude":
+                    prune_magnitude(config.sparse, model, tokenizer, device, prune_n=prune_n, prune_m=prune_m)
+                elif config.sparse.method == "sparsegpt":
+                    prune_sparsegpt(config.sparse, calibrate, model, tokenizer, device, prune_n=prune_n, prune_m=prune_m)
+                elif "ablate" in config.sparse.method:
+                    prune_ablate(config.sparse, calibrate, model, tokenizer, device, prune_n=prune_n, prune_m=prune_m)
+                
+                sparsity_ratio = check_sparsity(model)
+                logger.info(f"sparsity sanity check {sparsity_ratio:.4f}")
+            else:
+                logger.info("sparsity ratio is 0, no pruning")
 
         if config.quant.method == "omniquant":
             omniquant_compression_func = OMNIQUANT_COMPRESSION_MAP[config.base_model.type.lower()]
