@@ -24,11 +24,6 @@ LLM Compression Tool is a project designed to optimize machine learning inferenc
   - [Cite](#cite)
 
 
-## TODO
-- PTQ + Sparsification
-- PTQ + PTQ
-- Base model extension
-
 
 ## Introduction
 Although LLMs excel in various NLP tasks, their computational and memory demands may limit their deployment in real-time applications and on resource-constrained devices. This project addresses this challenge by employing quantization techniques to compress these models, ensuring they maintain performance while remaining adaptable to a wide range of scenarios. 
@@ -60,9 +55,10 @@ Although LLMs excel in various NLP tasks, their computational and memory demands
 ### todo
 - 量化模型的浮点型保存 done
 - 基座模型推广，已完成llama, Qwen和部分deepseek模型 done
-- 校准数据集的优选 doing
-- 部分评测任务缺失:longbench_hotpotqa，后续会加入整个longbench的测试
-- 稀疏化 未开始
+- 校准数据集的优选 done
+- 部分评测任务缺失 done
+- 稀疏化 done
+- onebit qat-llm efficientqat的模型训练 doing
 - 评测 doing
 
 ## Features
@@ -75,19 +71,17 @@ Although LLMs excel in various NLP tasks, their computational and memory demands
   - [x] OWQ 海达
   - [x] SmoothQuant 博瀚
   - [x] QuIP/QUIP# 志炀
-  - [ ] BiLLM 海达
-  - [ ] QAT-LLM
-  - [ ] EfficientQAT
+  - [x] BiLLM 海达
+  - [x] QAT-LLM
+  - [x] EfficientQAT
   - [x] QLoRA 志炀
   - [x] QA-LoRA 志炀
   - [x] IR-QLoRA 博翰
   - [x] FBI-LLM 志炀
   - [x] OneBit
   - [x] mix-precision QAT
-  - [ ] Joint Sparsification and
-Quantization (JSQ)
-  - [ ] GPTQ + AWQ
-  - [ ] SmoothQuant + GPTQ
+  - [x] GPTQ + AWQ
+  - [x] SmoothQuant + GPTQ
 -  Supports for various base model, including:
     - LLaMA
     - Qwen
