@@ -141,7 +141,10 @@ def deepseek_sequential(model, method, calibrate_data, **kwargs):
                         layer.quantizer[1].to(offload)
                         layer.quantizer[0].fake_w = Q
                         layer.set_default_quantizer(0)
-                        del layer.quantizer[1], layer.core.weight
+                        layer.core.weight.data = layer.quantizer[0].fake_w.div(
+                            layer.quantizer[0].smooth_factor.view(1, -1))
+                        # del layer.quantizer[1], layer.core.weight
+                        del layer.quantizer[1]
                         layer.to(offload)
                         clear_mem()
                     elif method=='smoothquant+gptq':
