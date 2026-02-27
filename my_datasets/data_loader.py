@@ -50,7 +50,7 @@ def cola_calibrate_loader(
         if model is None:
             raise ValueError("force_regenerate=True 或 JSON不存在时，必须传入 model 参数！")
 
-        logging.info("🚀 开始运行完整 COLA pipeline (Stage 1-3)...")
+        logging.info("开始运行完整 COLA pipeline (Stage 1-3)...")
 
         # 参考 run_cola.py 的参数配置
         available_datasets = kwargs.get("datasets", ["DKYoon/slimpajama-200k", "c4"])
