@@ -1,10 +1,9 @@
-
 base_model:
     type: Llama
-    path: /home/yuhaida/huggingface/hub/models--huggyllama--llama-7b/snapshots/4782ad278652c7c71b72204d462d6d01eaaf7549
+    path: /netcache/huggingface/llama-2-7b-hf/
     torch_dtype: torch.float16
     tokenizer_mode: fast
-    device_map: "cuda:0"
+    device_map: auto
 quant:
     method: gptq
     skip_layers: [ lm_head ]
@@ -28,33 +27,22 @@ quant:
       blocksize: 128
       true_sequential: True
     data:
-      name: cola
-      force_regenerate: True
+      name: c4
       nsamples: 128
       seqlen: 2048
-      download: True
-      batch_size: 4
-      split: validation
+      download: False
+      path: /netcache/huggingface/c4_local/c4-train.00000-of-01024.json.gz
+      batch_size: 32
+      split: train
       seed: 42
-#      datakey:
-# datakey: field name of raw text in the dataset (e.g., "text" for C4/Wiki, "sentence" for PTB)
-
-
 eval:
   device: cuda
   tasks: [
     {
       task: acc,
-      datasets: [winogrande, arc_easy, arc_challenge, piqa, mmlu, openbookqa, mathqa],
+      datasets: [winogrande, arc_easy, arc_challenge, piqa],
       batch_size: auto,
       num_fewshot: 2
-    },
-    {
-      task: ppl,
-      datasets: [wikitext2],
-      download: True,
-      seqlen: 2048,
-      nsamples: all
     },
     {
       task: ppl,
@@ -64,5 +52,4 @@ eval:
       nsamples: all
     }
   ]
-
-save: /home/yuhaida/llama_7b/output/llama7b_cola_3bit_gptq
+save: /home/yejinyu/llama2_7b/output/llama27b_miom_2
