@@ -22,7 +22,7 @@ from torch.nn.utils.rnn import pad_sequence
 
 def get_redpajama(tokenizer, train_size, val_size, seed, seqlen):
     try:
-        loacal_dataset = "/cpfs01/user/chenmengzhao/huggingface/datasets/togethercomputer___red_pajama-data-1_t-sample"
+        loacal_dataset = "to you path___red_pajama-data-1_t-sample"
         traindata = load_dataset(loacal_dataset, split='train')
     except:
         traindata = load_dataset("togethercomputer/RedPajama-Data-1T-Sample", split='train')
@@ -136,7 +136,7 @@ def get_c4(tokenizer, split='validation', nsamples=128, seqlen=2048, seed=42, **
 def get_ptb(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwargs):
     if split == 'train':
         logging.info("get_ptb_train")
-        traindata = load_dataset("./my_datasets/ptb_text_only", 'penn_treebank', split='train')
+        traindata = load_dataset("ptb-text-only/ptb_text_only", split='train')
         trainenc = tokenizer(" ".join(traindata["sentence"]), return_tensors="pt")
         random.seed(seed)
         trainloader = []
@@ -152,7 +152,7 @@ def get_ptb(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwarg
 
     if split == 'test':
         logging.info("get_ptb_test")
-        testdata = load_dataset("./my_datasets/ptb_text_only", 'penn_treebank', split='test')
+        testdata = load_dataset("ptb-text-only/ptb_text_only", 'penn_treebank', split='test')
         testenc = tokenizer(" ".join(testdata["sentence"]), return_tensors="pt")
         testloader = []
         testenc = testenc.input_ids
