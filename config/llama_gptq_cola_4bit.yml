@@ -32,7 +32,7 @@ quant:
       nsamples: 128
       seqlen: 2048
       download: True
-      batch_size: 32
+      batch_size: 4
       split: validation
       seed: 42
 #      datakey:
