@@ -9,7 +9,7 @@ from easydict import EasyDict
 from loguru import logger
 
 from eval.eval_by_category import run_evaluation
-from my_datasets import get_calibrate_loader,make_data_module,get_dataset_loader
+from my_datasets import get_calibrate_loader,make_data_module,get_dataset_loader, cola_calibrate_loader
 from quantization.layers import LinearQuantHub
 from quantization.llama_seq import llama_sequential, llama_omniquant
 from quantization.qwen_seq import qwen_sequential 
@@ -21,7 +21,11 @@ from sparse.lib.prune import prune_wanda, prune_magnitude, prune_sparsegpt, prun
 
 
 def get_model(config):
-    basemodel = BaseModel(config, device_map=config.get("quant",{}).get("device",None))
+    # 修复：当 quant 为 false 时，不从 quant 里取 device
+    quant_config = config.get("quant")
+    device_map = quant_config.get("device", None) if isinstance(quant_config, dict) else None
+    
+    basemodel = BaseModel(config, device_map=device_map)
     tokenizer = basemodel.build_tokenizer()
     model = basemodel.build_model()
     return model, tokenizer , basemodel
@@ -55,7 +59,10 @@ def main(config):
             pass
         else:
             model, tokenizer, basemodel = get_model(config)
-            calibrate = get_calibrate_loader(tokenizer=tokenizer, **config.quant.data)
+            if config.quant.data.name == "cola":
+                calibrate = cola_calibrate_loader(tokenizer=tokenizer, model=model, **config.quant.data)
+            else:
+                calibrate = get_calibrate_loader(tokenizer=tokenizer, **config.quant.data)
         
         if config.get("sparse", False):
             # Handling n:m sparsity

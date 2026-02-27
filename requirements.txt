@@ -153,6 +153,7 @@ scikit-learn==1.7.1
 scipy==1.11.3
 semantic-version==2.10.0
 sentencepiece==0.2.0
+sentence-transformers>=2.2.0
 shellingham==1.5.4
 six==1.17.0
 smmap==5.0.2
