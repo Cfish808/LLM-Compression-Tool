@@ -13,12 +13,126 @@ from .load_ceval import get_calibrate_ceval
 from .load_cmmlu import get_calibrate_cmmlu
 from .load_boss import get_calibrate_boss
 
+from .cola import COLA
+
 import os
 
 from datasets import load_dataset, concatenate_datasets, interleave_datasets
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Sequence, Union, List, Any
 from torch.nn.utils.rnn import pad_sequence
+
+def cola_calibrate_loader(
+    tokenizer, 
+    model=None, 
+    split='test', 
+    nsamples=128, 
+    seqlen=2048, 
+    seed=42, 
+    json_path="my_datasets/cola_calibration_dataset_cleaned.json",
+    force_regenerate=False,   # True = 强制重新跑 COLA
+    **kwargs
+):
+    """
+    COLA 校准数据加载器 - 带缓存机制
+    - 如果 JSON 文件存在且 force_regenerate=False → 直接读取
+    - 否则 → 运行完整 COLA pipeline 并保存 JSON
+    """
+    import json
+    from pathlib import Path
+    import random
+
+    json_path = Path(json_path)
+    logging.info(f"[COLA] force_regenerate={force_regenerate} | JSON存在={json_path.exists()}")
+
+    # ==================== 1. 检查是否需要运行 COLA ====================
+    if force_regenerate or not json_path.exists():
+        if model is None:
+            raise ValueError("force_regenerate=True 或 JSON不存在时，必须传入 model 参数！")
+
+        logging.info("开始运行完整 COLA pipeline (Stage 1-3)...")
+
+        # 参考 run_cola.py 的参数配置
+        available_datasets = kwargs.get("datasets", ["DKYoon/slimpajama-200k", "c4"])
+        target_capabilities = kwargs.get("target_capabilities", ["commonsense", "math", "code"])
+        deployment_type = kwargs.get("deployment_type", "general")
+        targeted_capability = kwargs.get("targeted_capability", None)
+
+        if deployment_type == "targeted" and targeted_capability:
+            capability_weights = {targeted_capability: 1.0}
+            for cap in target_capabilities:
+                if cap != targeted_capability:
+                    capability_weights[cap] = 0.2
+        else:
+            capability_weights = {cap: 1.0 / len(target_capabilities) for cap in target_capabilities}
+
+        # 初始化并运行 COLA
+        cola = COLA(
+            model=model,
+            tokenizer=tokenizer,
+            available_datasets=available_datasets,
+            target_capabilities=target_capabilities,
+            capability_weights=capability_weights,
+            output_dir=kwargs.get("output_dir", "./cola_output"),
+            device=kwargs.get("device", "cuda" if torch.cuda.is_available() else "cpu")
+        )
+
+        stage1_params = kwargs.get("stage1_params", {"alpha": 0.6})
+        stage2_params = kwargs.get("stage2_params", {
+            "add_reasoning_chains": True,
+            "min_length": 256,
+            "filter_low_quality": True
+        })
+        stage3_params = kwargs.get("stage3_params", {"batch_size": kwargs.get("batch_size", 4)})
+
+        calibration_samples = cola.run(
+            num_samples=nsamples,
+            sequence_length=seqlen,
+            stage1_params=stage1_params,
+            stage2_params=stage2_params,
+            stage3_params=stage3_params
+        )
+
+        # 保存为 JSON（供下次快速加载）
+        cola._save_samples(calibration_samples, str(json_path))
+        logging.info(f"✅ COLA pipeline 运行完成，已保存 {len(calibration_samples)} 条样本")
+
+    # ==================== 2. 加载 JSON 并生成 loader ====================
+    logging.info(f"从 {json_path} 加载 COLA 数据...")
+    with open(json_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    # 提取文本
+    texts = []
+    for item in data:
+        text = item.get("text") or item.get("Text") or ""
+        if isinstance(text, str) and len(text.strip()) > 50:
+            texts.append(text.strip())
+
+    if not texts:
+        raise ValueError(f"JSON 文件 {json_path} 中没有有效文本！")
+
+    logging.info(f"共加载 {len(texts)} 条有效 COLA 文本")
+
+    full_text = "\n\n".join(texts)
+    enc = tokenizer(full_text, return_tensors='pt')
+
+    random.seed(seed)
+    loader = []
+    total_len = enc.input_ids.shape[1]
+
+    for _ in range(nsamples):
+        if total_len <= seqlen:
+            inp = enc.input_ids[:, :seqlen]
+            inp = torch.nn.functional.pad(inp, (0, seqlen - inp.shape[1]), value=tokenizer.pad_token_id)
+        else:
+            i = random.randint(0, total_len - seqlen - 1)
+            j = i + seqlen
+            inp = enc.input_ids[:, i:j]
+        loader.append(inp)
+
+    logging.info(f"✅ COLA 校准 loader 准备完成，共 {len(loader)} 个样本")
+    return loader
 
 def get_redpajama(tokenizer, train_size, val_size, seed, seqlen):
     try:

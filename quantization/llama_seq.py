@@ -80,6 +80,7 @@ def llama_sequential(model, method, calibrate_data, **kwargs):
         fp_outputs = [None] * len(inputs)
 
         for i in range(len(layers)):
+            print("in layer ", i, " length ", len(layers)) 
             if hasattr(layers[i], "_hf_hook"):
                 from accelerate.hooks import remove_hook_from_module
                 remove_hook_from_module(layers[i], recurse=True)
