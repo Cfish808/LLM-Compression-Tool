@@ -91,11 +91,6 @@ Although LLMs excel in various NLP tasks, their computational and memory demands
    ```
    pip install -r requirements.txt
    ```
-4. Install the package in editable mode:
-
-    ```bash
-    pip install -e .
-    ```
 
 ## Usage
 ### Quick Start
