@@ -44,6 +44,7 @@ def extract_activations(
 ):
     """
     增强版：自动检测 + 强力 fallback（兼容 Llama/Qwen/Gemma/Mistral/Phi 等几乎所有模型）
+    【已修改：全程 GPU，不再搬到 CPU（彻底解决 Half 相关错误）】
     """
     model = model.to(device)
     model.eval()
@@ -82,7 +83,7 @@ def extract_activations(
 
     # ==================== 注册 hooks（只 hook 每个层的 output） ====================
     hooks = []
-    for name, module in transformer_layers[-16:]:   # 最多取最后 16 层（够用且省显存）
+    for name, module in transformer_layers[-16:]:   # ← 保持你原来的 16 层
         # 优先 hook 能输出 hidden_states 的部分
         if hasattr(module, "output"):
             target = module.output
@@ -94,28 +95,32 @@ def extract_activations(
         hook = ActivationHook(target)
         hooks.append((name, hook))
 
-    # ==================== 实际前向传播 ====================
-    input_ids = inputs["input_ids"].to(device)
-    attention_mask = inputs["attention_mask"].to(device)
-    num_samples = input_ids.shape[0]
+    # ==================== 实际前向传播（全程 GPU） ====================
+    # 只把原始数据留在 CPU，batch 才搬运（避免一次性占满显存）
+    input_ids_cpu = inputs["input_ids"]
+    attention_mask_cpu = inputs["attention_mask"]
+    num_samples = input_ids_cpu.shape[0]
     all_activations = {}
 
     with torch.no_grad():
         for i in range(0, num_samples, batch_size):
-            batch_ids = input_ids[i:i+batch_size]
-            batch_mask = attention_mask[i:i+batch_size]
+            batch_ids = input_ids_cpu[i:i+batch_size].to(device)
+            batch_mask = attention_mask_cpu[i:i+batch_size].to(device)
             
             _ = model(input_ids=batch_ids, attention_mask=batch_mask)
             
             for name, hook in hooks:
                 if hook.activations is not None:
-                    # 取 mean pooling（每个样本一个向量）
-                    mean_act = hook.activations.mean(dim=1).cpu()
+                    # 🔥 关键修改：全程 GPU，不再 .cpu()
+                    mean_act = hook.activations.mean(dim=1)
                     if name not in all_activations:
                         all_activations[name] = []
                     all_activations[name].append(mean_act)
+                    hook.activations = None   # 立即释放，防止多层同时占用显存
+            
+            torch.cuda.empty_cache()   # 每 batch 清缓存，防碎片
 
-    # 合并
+    # 合并（仍在 GPU）
     for name in all_activations:
         all_activations[name] = torch.cat(all_activations[name], dim=0)
 
@@ -123,6 +128,7 @@ def extract_activations(
     for _, hook in hooks:
         hook.remove()
 
+    logger.info(f"成功提取激活（全程 GPU），形状: {[v.shape for v in all_activations.values()]}")
     return all_activations
 
 
@@ -144,55 +150,34 @@ def aggregate_layer_activations(layer_activations):
     logger.info(f"成功聚合 {len(all_layers)} 层激活，形状: {aggregated.shape}")
     return aggregated
 
+
 def random_projection(activation_vectors, reduced_dim=64):
     """
-    随机投影 - 已修复 Half / float32 类型不匹配 + 设备兼容
+    随机投影 - GPU 专用版（全程 GPU，不再有 CPU Half 问题）
     """
-    # 确保是 Tensor
     if not isinstance(activation_vectors, torch.Tensor):
-        activation_vectors = torch.tensor(activation_vectors)
+        activation_vectors = torch.tensor(activation_vectors, device="cuda")
     
-    # 关键修复：和激活向量使用完全相同的 dtype 和 device
     device = activation_vectors.device
     dtype = activation_vectors.dtype
-    
     original_dim = activation_vectors.shape[1]
     
-    # 创建和激活同类型的随机矩阵
+    # 用 Python 原生计算 scale（最稳）
+    scale = reduced_dim ** -0.5
+    scale_tensor = torch.tensor(scale, device=device, dtype=dtype)
+    
     random_matrix = torch.randn(
         original_dim, 
         reduced_dim, 
         device=device, 
         dtype=dtype
-    ) / torch.sqrt(torch.tensor(reduced_dim, device=device, dtype=dtype))
+    ) * scale_tensor
     
-    # 执行投影
     projected_vectors = torch.matmul(activation_vectors, random_matrix)
     
-    logger.info(f"随机投影完成：{original_dim} → {reduced_dim} 维，dtype={dtype}")
+    logger.info(f"随机投影完成（GPU）：{original_dim} → {reduced_dim} 维，dtype={dtype}")
     return projected_vectors
 
-def aggregate_layer_activations(layer_activations):
-    """
-    Aggregate activations from different layers.
-    
-    Args:
-        layer_activations: Dictionary mapping layer names to activations
-        
-    Returns:
-        Tensor of aggregated activations
-    """
-    # Stack activations from all layers
-    all_layers = []
-    for layer_name, activations in layer_activations.items():
-        # Normalize each layer's activations
-        norm_activations = activations / (activations.norm(dim=1, keepdim=True) + 1e-8)
-        all_layers.append(norm_activations)
-    
-    # Concatenate along feature dimension
-    aggregated = torch.cat(all_layers, dim=1)
-    
-    return aggregated
 
 def cluster_samples(activation_vectors, n_clusters=128, random_state=42):
     """
@@ -206,9 +191,9 @@ def cluster_samples(activation_vectors, n_clusters=128, random_state=42):
     Returns:
         KMeans object with cluster assignments
     """
-    # Convert to numpy for sklearn
+    # Convert to numpy for sklearn（只在这里转 CPU）
     if isinstance(activation_vectors, torch.Tensor):
-        vectors_np = activation_vectors.numpy()
+        vectors_np = activation_vectors.cpu().numpy()
     else:
         vectors_np = activation_vectors
     
@@ -221,6 +206,7 @@ def cluster_samples(activation_vectors, n_clusters=128, random_state=42):
     kmeans.fit(vectors_np)
     
     return kmeans
+
 
 def select_representative_samples(samples, activation_vectors, kmeans):
     """
@@ -239,7 +225,7 @@ def select_representative_samples(samples, activation_vectors, kmeans):
     
     # Convert to numpy for distance calculations
     if isinstance(activation_vectors, torch.Tensor):
-        vectors_np = activation_vectors.numpy()
+        vectors_np = activation_vectors.cpu().numpy()
     else:
         vectors_np = activation_vectors
     
@@ -270,6 +256,7 @@ def select_representative_samples(samples, activation_vectors, kmeans):
     selected_samples = [samples[i] for i in selected_indices]
     
     return selected_samples
+
 
 def select_samples(
     processed_samples: List[Dict],
@@ -315,7 +302,7 @@ def select_samples(
         max_length=2048  # Adjust based on your model's context size
     )
     
-    # Extract activations from model
+    # Extract activations from model（全程 GPU）
     logger.info("Extracting activations from model...")
     layer_activations = extract_activations(
         model=model,
@@ -329,9 +316,10 @@ def select_samples(
     logger.info("Aggregating activations from all layers...")
     aggregated_activations = aggregate_layer_activations(layer_activations)
     
-    # Random projection to reduce dimensionality
+    # Random projection to reduce dimensionality（全程 GPU）
     logger.info(f"Applying random projection to reduce dimension to {reduced_dim}...")
     projected_activations = random_projection(aggregated_activations, reduced_dim)
+    projected_activations = projected_activations.cpu()
     
     # Cluster samples
     logger.info(f"Clustering samples into {num_clusters} clusters...")

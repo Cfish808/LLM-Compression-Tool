@@ -29,7 +29,7 @@ def cola_calibrate_loader(
     nsamples=128, 
     seqlen=2048, 
     seed=42, 
-    json_path="my_datasets/cola_calibration_dataset_cleaned.json",
+    json_path="my_datasets/colac4_calibration_dataset_cleaned.json",
     force_regenerate=False,   # True = 强制重新跑 COLA
     **kwargs
 ):

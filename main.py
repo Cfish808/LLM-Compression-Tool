@@ -30,6 +30,23 @@ def get_model(config):
     model = basemodel.build_model()
     return model, tokenizer , basemodel
 
+def get_cola_model(config):
+    """严格仿照 get_model，只改加载路径为 quant.data.model_path"""
+    quant_config = config.get("quant")
+    device_map = quant_config.get("device", None) if isinstance(quant_config, dict) else None
+    
+    # 临时改 path，执行完自动恢复（不影响其他地方）
+    original_path = config.base_model.path
+    try:
+        config.base_model.path = config.quant.data.model_path
+        
+        basemodel = BaseModel(config, device_map=device_map)
+        tokenizer = basemodel.build_tokenizer()
+        model = basemodel.build_model()
+        
+        return model, tokenizer, basemodel
+    finally:
+        config.base_model.path = original_path   # 必须恢复！
 
 def main(config):
     SEQUENTIAL_COMPRESSION_MAP = {
@@ -58,10 +75,11 @@ def main(config):
         elif config.quant.method == "efficientqat_e2e":
             pass
         else:
-            model, tokenizer, basemodel = get_model(config)
             if config.quant.data.name == "cola":
-                calibrate = cola_calibrate_loader(tokenizer=tokenizer, model=model, **config.quant.data)
+                model_cola, tokenizer_cola, basemodel = get_cola_model(config)
+                calibrate = cola_calibrate_loader(tokenizer=tokenizer_cola, model=model_cola, **config.quant.data)
             else:
+                model, tokenizer, basemodel = get_model(config)
                 calibrate = get_calibrate_loader(tokenizer=tokenizer, **config.quant.data)
         
         if config.get("sparse", False):
