@@ -77,7 +77,7 @@ Although LLMs excel in various NLP tasks, their computational and memory demands
 1. Clone the repository:
 
     ```bash
-    git clone git@gitee.com:zhangyujie0218/model-quantification-tool.git
+    git clone https://github.com/Cfish808/LLM-Compression-Tool.git
     ```
 
 2. Create and activate a virtual environment (optional but recommended):
