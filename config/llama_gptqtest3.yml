@@ -35,7 +35,7 @@ quant:
       batch_size: 4
       split: validation
       seed: 42
-      json_path: my_datasets/cola_calibration_dataset_3.json
+      json_path: my_datasets/c4cola_calibration_dataset.json
       model_path: /home/yuhaida/huggingface/hub/models--huggyllama--llama-7b/snapshots/4782ad278652c7c71b72204d462d6d01eaaf7549
       force_regenerate: True   # True = 强制重新跑 COLA
       datasets: [c4,wikitext]
