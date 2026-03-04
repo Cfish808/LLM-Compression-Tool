@@ -1,0 +1,73 @@
+
+base_model:
+    type: Llama
+    path: /netcache/huggingface/llama-2-7b-hf/
+    torch_dtype: torch.float16
+    tokenizer_mode: fast
+    device_map: "cuda:0"
+quant:
+    method: gptq
+    skip_layers: [ lm_head ]
+    seqlen: 2048
+    device: cuda
+    weight:
+      wbit: 4
+      abit: 16
+      offload: cpu
+      block_sequential: True
+      layer_sequential: True
+      w_qtype: per_group
+      groupsize: 128
+      blocksize: 128
+      percdamp: 0.01
+      actorder: False
+    special:
+      actorder: True
+      static_groups: False
+      percdamp: 0.01
+      blocksize: 128
+      true_sequential: True
+    data:
+      name: cola
+      nsamples: 128
+      seqlen: 2048
+      download: True
+      batch_size: 4
+      split: validation
+      seed: 42
+      json_path: my_datasets/cola_calibration_dataset_4.json
+      force_regenerate: True   # True = 强制重新跑 COLA
+      datasets: [c4,wikitext]
+      target_capabilities: [commonsense, math, code]
+
+#      datakey:
+# datakey: field name of raw text in the dataset (e.g., "text" for C4/Wiki, "sentence" for PTB)
+
+
+
+eval:
+  device: cuda
+  tasks: [
+    {
+      task: acc,
+      datasets: [winogrande, arc_easy, arc_challenge, piqa, hellaswag],
+      batch_size: 32,
+      num_fewshot: 0
+    },
+    {
+      task: ppl,
+      datasets: [wikitext2],
+      download: True,
+      seqlen: 2048,
+      nsamples: all
+    },
+    {
+      task: ppl,
+      datasets: [c4],
+      download: True,
+      seqlen: 2048,
+      nsamples: all
+    }
+  ]
+
+save: /home/yuhaida/llama_7b/output/llama7b_colaxc4_8848_4bit_gptq
