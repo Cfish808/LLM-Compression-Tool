@@ -35,8 +35,14 @@ quant:
       batch_size: 4
       split: validation
       seed: 42
+      json_path: my_datasets/cola_calibration_dataset_4.json
+      force_regenerate: True   # True = 强制重新跑 COLA
+      datasets: [c4,wikitext]
+      target_capabilities: [commonsense, math, code]
+
 #      datakey:
 # datakey: field name of raw text in the dataset (e.g., "text" for C4/Wiki, "sentence" for PTB)
+
 
 
 eval:
@@ -45,8 +51,8 @@ eval:
     {
       task: acc,
       datasets: [winogrande, arc_easy, arc_challenge, piqa, hellaswag],
-      batch_size: auto,
-      num_fewshot: 5
+      batch_size: 32,
+      num_fewshot: 0
     },
     {
       task: ppl,
@@ -64,4 +70,4 @@ eval:
     }
   ]
 
-save: /home/yuhaida/llama_7b/output/llama7b_cola_4bit_gptq
+save: /home/yuhaida/llama_7b/output/llama7b_colaxc4_8848_4bit_gptq
