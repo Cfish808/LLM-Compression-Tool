@@ -494,3 +494,7 @@
 2026-02-27 07:59:55,183 - COLA - INFO - Tokenizing samples...
 2026-02-27 08:00:02,823 - COLA - INFO - Extracting activations from model...
 2026-02-27 08:00:02,830 - COLA - INFO - 成功检测到 32 个层用于提取激活
+2026-03-04 17:12:26,905 - COLA - INFO - Initializing COLA framework with capabilities: ['commonsense', 'math', 'code']
+2026-03-04 17:12:26,905 - COLA - INFO - Using device: cuda
+2026-03-04 17:12:26,909 - COLA - INFO - Starting COLA framework pipeline
+2026-03-04 17:12:26,909 - COLA - INFO - Stage 1: Dataset Selection
