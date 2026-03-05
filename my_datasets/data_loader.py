@@ -9,9 +9,6 @@ import numpy as np
 import torch
 
 import copy
-from .load_ceval import get_calibrate_ceval
-from .load_cmmlu import get_calibrate_cmmlu
-from .load_boss import get_calibrate_boss
 
 from .cola import COLA
 
