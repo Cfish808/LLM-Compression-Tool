@@ -9,9 +9,8 @@ import numpy as np
 import torch
 
 import copy
-from .load_ceval import get_calibrate_ceval
-from .load_cmmlu import get_calibrate_cmmlu
-from .load_boss import get_calibrate_boss
+
+from .cola import COLA
 
 from .cola import COLA
 
@@ -29,7 +28,11 @@ def cola_calibrate_loader(
     nsamples=128, 
     seqlen=2048, 
     seed=42, 
+<<<<<<< HEAD
     json_path="my_datasets/colac4_calibration_dataset_cleaned.json",
+=======
+    json_path="my_datasets/cola_calibration_dataset_cleaned.json",
+>>>>>>> master
     force_regenerate=False,   # True = 强制重新跑 COLA
     **kwargs
 ):
@@ -50,7 +53,11 @@ def cola_calibrate_loader(
         if model is None:
             raise ValueError("force_regenerate=True 或 JSON不存在时，必须传入 model 参数！")
 
+<<<<<<< HEAD
         logging.info("🚀 开始运行完整 COLA pipeline (Stage 1-3)...")
+=======
+        logging.info("开始运行完整 COLA pipeline (Stage 1-3)...")
+>>>>>>> master
 
         # 参考 run_cola.py 的参数配置
         available_datasets = kwargs.get("datasets", ["DKYoon/slimpajama-200k", "c4"])
@@ -136,10 +143,10 @@ def cola_calibrate_loader(
 
 def get_redpajama(tokenizer, train_size, val_size, seed, seqlen):
     try:
-        loacal_dataset = "/cpfs01/user/chenmengzhao/huggingface/datasets/togethercomputer___red_pajama-data-1_t-sample"
+        loacal_dataset = "Local path to the RedPajama-Data-1T_sample dataset"
         traindata = load_dataset(loacal_dataset, split='train')
     except:
-        traindata = load_dataset("togethercomputer/RedPajama-Data-1T-Sample", split='train')
+        traindata = load_dataset("ZengXiangyu/RedPajama-Data-1T-Sample", split='train')
 
     random.seed(seed)
     traindata = traindata.shuffle(seed=seed)
@@ -250,7 +257,7 @@ def get_c4(tokenizer, split='validation', nsamples=128, seqlen=2048, seed=42, **
 def get_ptb(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwargs):
     if split == 'train':
         logging.info("get_ptb_train")
-        traindata = load_dataset("./my_datasets/ptb_text_only", 'penn_treebank', split='train')
+        traindata = load_dataset("ptb-text-only/ptb_text_only",  split='train')
         trainenc = tokenizer(" ".join(traindata["sentence"]), return_tensors="pt")
         random.seed(seed)
         trainloader = []
@@ -266,7 +273,7 @@ def get_ptb(tokenizer, split='test', nsamples=128, seqlen=2048, seed=42, **kwarg
 
     if split == 'test':
         logging.info("get_ptb_test")
-        testdata = load_dataset("./my_datasets/ptb_text_only", 'penn_treebank', split='test')
+        testdata = load_dataset("ptb-text-only/ptb_text_only",  split='test')
         testenc = tokenizer(" ".join(testdata["sentence"]), return_tensors="pt")
         testloader = []
         testenc = testenc.input_ids

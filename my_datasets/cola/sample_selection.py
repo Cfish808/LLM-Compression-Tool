@@ -207,7 +207,6 @@ def cluster_samples(activation_vectors, n_clusters=128, random_state=42):
     
     return kmeans
 
-
 def select_representative_samples(samples, activation_vectors, kmeans):
     """
     Select representative samples from each cluster.
@@ -256,7 +255,6 @@ def select_representative_samples(samples, activation_vectors, kmeans):
     selected_samples = [samples[i] for i in selected_indices]
     
     return selected_samples
-
 
 def select_samples(
     processed_samples: List[Dict],
