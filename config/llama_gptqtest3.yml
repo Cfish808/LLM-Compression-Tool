@@ -4,7 +4,7 @@ base_model:
     path: /netcache/huggingface/llama-2-7b-hf/
     torch_dtype: torch.float16
     tokenizer_mode: fast
-    device_map: "cuda:0"
+    device_map: cuda:0
 quant:
     method: gptq
     skip_layers: [ lm_head ]
@@ -35,9 +35,9 @@ quant:
       batch_size: 4
       split: validation
       seed: 42
-      json_path: my_datasets/c4cola_calibration_dataset.json
+      json_path: my_datasets/colac4_calibration_dataset_cleaned.json
       model_path: /home/yuhaida/huggingface/hub/models--huggyllama--llama-7b/snapshots/4782ad278652c7c71b72204d462d6d01eaaf7549
-      force_regenerate: True   # True = 强制重新跑 COLA
+      force_regenerate: False   # True = 强制重新跑 COLA
       datasets: [c4,wikitext]
       target_capabilities: [commonsense, math, code]
 

@@ -76,8 +76,22 @@ def main(config):
             pass
         else:
             if config.quant.data.name == "cola":
-                model_cola, tokenizer_cola, basemodel = get_cola_model(config)
+                model_cola, tokenizer_cola, basemodel_cola = get_cola_model(config)
                 calibrate = cola_calibrate_loader(tokenizer=tokenizer_cola, model=model_cola, **config.quant.data)
+            
+                del model_cola
+                del tokenizer_cola
+                del basemodel_cola
+                
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
+                torch.cuda.reset_peak_memory_stats()
+                
+                import gc
+                gc.collect(2)                      # 强制完整垃圾回收
+        
+                logger.info("✅ cola 校准模型已彻底释放，显存清理完成")
+                model, tokenizer, basemodel = get_model(config)
             else:
                 model, tokenizer, basemodel = get_model(config)
                 calibrate = get_calibrate_loader(tokenizer=tokenizer, **config.quant.data)
