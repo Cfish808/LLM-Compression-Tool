@@ -169,11 +169,7 @@ def process_datasets(
     add_reasoning_chains: bool = True,
     min_length: int = 256,
     filter_low_quality: bool = True,
-<<<<<<< HEAD
     max_samples_per_dataset: int = 10000
-=======
-    max_samples_per_dataset: int = 5000   # 测试时用小数字，跑通后改大
->>>>>>> master
 ) -> List[Dict]:
     """
     Process the selected datasets by optimizing their compositional properties.
