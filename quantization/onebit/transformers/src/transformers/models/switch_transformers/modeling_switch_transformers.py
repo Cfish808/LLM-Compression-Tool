@@ -54,18 +54,8 @@ _CHECKPOINT_FOR_DOC = "google/switch-base-8"
 # This dict contains ids and associated url
 # for the pretrained weights provided with the models
 ####################################################
-SWITCH_TRANSFORMERS_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    "google/switch-base-8",
-    "google/switch-base-16",
-    "google/switch-base-32",
-    "google/switch-base-64",
-    "google/switch-base-128",
-    "google/switch-base-256",
-    "google/switch-large-128",
-    "google/switch-xxl-128",
-    "google/switch-c-2048",
-    # See all SwitchTransformers models at https://huggingface.co/models?filter=switch_transformers
-]
+
+from ..deprecated._archive_maps import SWITCH_TRANSFORMERS_PRETRAINED_MODEL_ARCHIVE_LIST  # noqa: F401, E402
 
 
 def router_z_loss_func(router_logits: torch.Tensor) -> float:
@@ -168,18 +158,9 @@ class SwitchTransformersTop1Router(nn.Module):
         self.input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(self.dtype)
 
-        if self.jitter_noise > 0:
-            # Get the lower and upper bound of the uniform distribution
-            # Adapted from: https://stackoverflow.com/questions/44328530/how-to-get-a-uniform-distribution-in-a-range-r1-r2-in-pytorch
-            distrib_lower_bound = 1.0 - self.jitter_noise
-            distrib_upper_bound = 1.0 + self.jitter_noise
-
-            uniform_distrib = torch.rand(hidden_states.shape, device=hidden_states.device, dtype=self.dtype)
-            uniform_distrib = uniform_distrib * (distrib_lower_bound - distrib_upper_bound)
-
-            uniform_distrib = uniform_distrib + distrib_upper_bound
+        if self.training and self.jitter_noise > 0:
             # Multiply the token inputs by the uniform distribution - adding some noise
-            hidden_states *= uniform_distrib
+            hidden_states *= torch.empty_like(hidden_states).uniform_(1.0 - self.jitter_noise, 1.0 + self.jitter_noise)
 
         # Shape: [num_groups, tokens_per_group, num_experts]
         self._cast_classifier()
@@ -318,7 +299,7 @@ class SwitchTransformersSparseMLP(nn.Module):
         next_states = hidden_states.clone()
         for idx, expert in enumerate(self.experts.values()):
             token_indices = router_mask[:, :, idx].bool()
-            next_states[token_indices] = expert(hidden_states[token_indices])
+            next_states[token_indices] = expert(hidden_states[token_indices]).to(next_states.dtype)
 
         hidden_states = router_probs * next_states
         return hidden_states, (router_logits, expert_index)
@@ -907,7 +888,7 @@ class SwitchTransformersStack(SwitchTransformersPreTrainedModel):
         config.num_layers = config.num_decoder_layers if self.is_decoder else config.num_layers
         self.block = nn.ModuleList()
         for i in range(config.num_layers):
-            is_sparse = (i % sparse_step == 1) if sparse_step > 0 else False
+            is_sparse = (i % sparse_step == 1 or sparse_step == 1) if sparse_step > 0 else False
 
             self.block.append(
                 SwitchTransformersBlock(config, has_relative_attention_bias=bool(i == 0), is_sparse=is_sparse)
@@ -1329,6 +1310,11 @@ class SwitchTransformersModel(SwitchTransformersPreTrainedModel):
         self.encoder.set_input_embeddings(new_embeddings)
         self.decoder.set_input_embeddings(new_embeddings)
 
+    def _tie_weights(self):
+        if self.config.tie_word_embeddings:
+            self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
+            self._tie_or_clone_weights(self.decoder.embed_tokens, self.shared)
+
     def get_encoder(self):
         return self.encoder
 
@@ -1504,6 +1490,11 @@ class SwitchTransformersForConditionalGeneration(SwitchTransformersPreTrainedMod
         self.shared = new_embeddings
         self.encoder.set_input_embeddings(new_embeddings)
         self.decoder.set_input_embeddings(new_embeddings)
+
+    def _tie_weights(self):
+        if self.config.tie_word_embeddings:
+            self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
+            self._tie_or_clone_weights(self.decoder.embed_tokens, self.shared)
 
     def set_output_embeddings(self, new_embeddings):
         self.lm_head = new_embeddings
@@ -1806,6 +1797,10 @@ class SwitchTransformersEncoderModel(SwitchTransformersPreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         self.shared = new_embeddings
         self.encoder.set_input_embeddings(new_embeddings)
+
+    def _tie_weights(self):
+        if self.config.tie_word_embeddings:
+            self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
 
     def get_encoder(self):
         return self.encoder

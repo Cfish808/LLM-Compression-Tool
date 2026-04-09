@@ -47,10 +47,8 @@ logger = logging.get_logger(__name__)
 _CONFIG_FOR_DOC = "VideoMAEConfig"
 _CHECKPOINT_FOR_DOC = "MCG-NJU/videomae-base"
 
-VIDEOMAE_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    "MCG-NJU/videomae-base",
-    # See all VideoMAE models at https://huggingface.co/models?filter=videomae
-]
+
+from ..deprecated._archive_maps import VIDEOMAE_PRETRAINED_MODEL_ARCHIVE_LIST  # noqa: F401, E402
 
 
 @dataclass
@@ -848,8 +846,9 @@ class VideoMAEForPreTraining(VideoMAEPreTrainedModel):
             else:
                 # first, unnormalize the frames
                 device = pixel_values.device
-                mean = torch.as_tensor(IMAGENET_DEFAULT_MEAN).to(device)[None, None, :, None, None]
-                std = torch.as_tensor(IMAGENET_DEFAULT_STD).to(device)[None, None, :, None, None]
+                dtype = pixel_values.dtype
+                mean = torch.as_tensor(IMAGENET_DEFAULT_MEAN).to(device=device, dtype=dtype)[None, None, :, None, None]
+                std = torch.as_tensor(IMAGENET_DEFAULT_STD).to(device=device, dtype=dtype)[None, None, :, None, None]
                 frames = pixel_values * std + mean  # in [0, 1]
 
             batch_size, time, num_channels, height, width = frames.shape

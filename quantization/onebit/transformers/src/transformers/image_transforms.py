@@ -376,6 +376,11 @@ def normalize(
     channel_axis = get_channel_dimension_axis(image, input_data_format=input_data_format)
     num_channels = image.shape[channel_axis]
 
+    # We cast to float32 to avoid errors that can occur when subtracting uint8 values.
+    # We preserve the original dtype if it is a float type to prevent upcasting float16.
+    if not np.issubdtype(image.dtype, np.floating):
+        image = image.astype(np.float32)
+
     if isinstance(mean, Iterable):
         if len(mean) != num_channels:
             raise ValueError(f"mean must have {num_channels} elements if it is an iterable, got {len(mean)}")
@@ -744,7 +749,6 @@ def convert_to_rgb(image: ImageInput) -> ImageInput:
     """
     Converts an image to RGB format. Only converts if the image is of type PIL.Image.Image, otherwise returns the image
     as is.
-
     Args:
         image (Image):
             The image to convert.
@@ -752,6 +756,9 @@ def convert_to_rgb(image: ImageInput) -> ImageInput:
     requires_backends(convert_to_rgb, ["vision"])
 
     if not isinstance(image, PIL.Image.Image):
+        return image
+
+    if image.mode == "RGB":
         return image
 
     image = image.convert("RGB")

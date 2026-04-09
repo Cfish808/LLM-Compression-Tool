@@ -1,3 +1,72 @@
+# Copyright 2021 The HuggingFace Team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+Simple check list from AllenNLP repo: https://github.com/allenai/allennlp/blob/main/setup.py
+
+To create the package for pypi.
+
+1. Create the release branch named: v<RELEASE>-release, for example v4.19-release. For a patch release checkout the
+   current release branch.
+
+   If releasing on a special branch, copy the updated README.md on the main branch for your the commit you will make
+   for the post-release and run `make fix-copies` on the main branch as well.
+
+2. Run `make pre-release` (or `make pre-patch` for a patch release) and commit these changes with the message:
+   "Release: <VERSION>" and push.
+
+3. Go back to the main branch and run `make post-release` then `make fix-copies`. Commit these changes with the
+   message "v<NEXT_VERSION>.dev.0" and push to main.
+
+# If you were just cutting the branch in preparation for a release, you can stop here for now.
+
+4. Wait for the tests on the release branch to be completed and be green (otherwise revert and fix bugs)
+
+5. On the release branch, add a tag in git to mark the release: "git tag v<VERSION> -m 'Adds tag v<VERSION> for pypi' "
+   Push the tag to git: git push --tags origin v<RELEASE>-release
+
+6. Build both the sources and the wheel. Do not change anything in setup.py between
+   creating the wheel and the source distribution (obviously).
+
+   Run `make build-release`. This will build the release and do some sanity checks for you. If this ends with an error
+   message, you need to fix things before going further.
+
+   You should now have a /dist directory with both .whl and .tar.gz source versions.
+
+7. Check that everything looks correct by uploading the package to the pypi test server:
+
+   twine upload dist/* -r testpypi
+   (pypi suggest using twine as other methods upload files via plaintext.)
+   You may have to specify the repository url, use the following command then:
+   twine upload dist/* -r testpypi --repository-url=https://test.pypi.org/legacy/
+
+   Check that you can install it in a virtualenv by running:
+   pip install -i https://testpypi.python.org/pypi transformers
+
+   Check you can run the following commands:
+   python -c "from transformers import pipeline; classifier = pipeline('text-classification'); print(classifier('What a nice release'))"
+   python -c "from transformers import *"
+   python utils/check_build.py --check_lib
+
+   If making a patch release, double check the bug you are patching is indeed resolved.
+
+8. Upload the final version to actual pypi:
+   twine upload dist/* -r pypi
+
+9. Copy the release notes from RELEASE.md to the tag in github once everything is looking hunky-dory.
+"""
+
 import os
 import re
 import shutil
@@ -26,11 +95,10 @@ if stale_egg_info.exists():
 # 1. all dependencies should be listed here with their version requirements if any
 # 2. once modified, run: `make deps_table_update` to update src/transformers/dependency_versions_table.py
 _deps = [
-    "Pillow<10.0.0",
-    "accelerate>=0.20.3",
+    "Pillow>=10.0.1,<=15.0",
+    "accelerate>=0.21.0",
     "av==9.2.0",  # Latest version of PyAV (10.0.0) has issues with audio stream.
     "beautifulsoup4",
-    "black~=23.1",
     "codecarbon==1.2.0",
     "cookiecutter==1.7.3",
     "dataclasses",
@@ -49,7 +117,7 @@ _deps = [
     "fugashi>=1.0",
     "GitPython<3.1.19",
     "hf-doc-builder>=0.3.0",
-    "huggingface-hub>=0.16.4,<1.0",
+    "huggingface-hub>=0.19.3,<1.0",
     "importlib_metadata",
     "ipadic>=1.0.0,<2.0",
     "isort>=5.5.4",
@@ -58,11 +126,11 @@ _deps = [
     "jieba",
     "kenlm",
     # Keras pin - this is to make sure Keras 3 doesn't destroy us. Remove or change when we have proper support.
-    "keras<2.15",
+    "keras<2.16",
     "keras-nlp>=0.3.1",
     "librosa",
     "nltk",
-    "natten>=0.14.6",
+    "natten>=0.14.6,<0.15.0",
     "numpy>=1.17",
     "onnxconverter-common",
     "onnxruntime-tools>=1.4.2",
@@ -76,21 +144,21 @@ _deps = [
     "protobuf",
     "psutil",
     "pyyaml>=5.1",
-    "pydantic<2",
-    "pytest>=7.2.0",
+    "pydantic",
+    "pytest>=7.2.0,<8.0.0",
     "pytest-timeout",
     "pytest-xdist",
     "python>=3.8.0",
-    "ray[tune]",
+    "ray[tune]>=2.7.0",
     "regex!=2019.12.17",
     "requests",
     "rhoknp>=1.1.0,<1.3.1",
     "rjieba",
     "rouge-score!=0.0.7,!=0.0.8,!=0.1,!=0.1.1",
-    "ruff>=0.0.241,<=0.0.259",
+    "ruff==0.1.5",
     "sacrebleu>=1.4.12,<2.0.0",
     "sacremoses",
-    "safetensors>=0.3.1",
+    "safetensors>=0.4.1",
     "sagemaker>=2.31.0",
     "scikit-learn",
     "sentencepiece>=0.1.91,!=0.1.92",
@@ -100,14 +168,14 @@ _deps = [
     "sudachidict_core>=20220729",
     "tensorboard",
     # TensorFlow pin. When changing this value, update examples/tensorflow/_tests_requirements.txt accordingly
-    "tensorflow-cpu>=2.6,<2.15",
-    "tensorflow>=2.6,<2.15",
-    "tensorflow-text<2.15",
+    "tensorflow-cpu>=2.6,<2.16",
+    "tensorflow>=2.6,<2.16",
+    "tensorflow-text<2.16",
     "tf2onnx",
     "timeout-decorator",
     "timm",
-    "tokenizers>=0.14,<0.15",
-    "torch>=1.10,!=1.12.0",
+    "tokenizers>=0.19,<0.20",
+    "torch",
     "torchaudio",
     "torchvision",
     "pyctcdecode>=0.4.0",
@@ -241,7 +309,7 @@ extras["testing"] = (
         "dill",
         "evaluate",
         "pytest-timeout",
-        "black",
+        "ruff",
         "sacrebleu",
         "rouge-score",
         "nltk",
@@ -252,6 +320,8 @@ extras["testing"] = (
         "rjieba",
         "beautifulsoup4",
         "tensorboard",
+        "pydantic",
+        "sentencepiece",
     )
     + extras["retrieval"]
     + extras["modelcreation"]
@@ -259,7 +329,7 @@ extras["testing"] = (
 
 extras["deepspeed-testing"] = extras["deepspeed"] + extras["testing"] + extras["optuna"] + extras["sentencepiece"]
 
-extras["quality"] = deps_list("black", "datasets", "isort", "ruff", "GitPython", "hf-doc-builder", "urllib3")
+extras["quality"] = deps_list("datasets", "isort", "ruff", "GitPython", "hf-doc-builder", "urllib3")
 
 extras["all"] = (
     extras["tf"]
@@ -359,11 +429,11 @@ install_requires = [
 
 setup(
     name="transformers",
-    version="4.35.0.dev0",  # expected format is one of x.y.z.dev0, or x.y.z.rc1 or x.y.z (no to dashes, yes to dots)
+    version="4.40.0",  # expected format is one of x.y.z.dev0, or x.y.z.rc1 or x.y.z (no to dashes, yes to dots)
     author="The Hugging Face team (past and future) with the help of all our contributors (https://github.com/huggingface/transformers/graphs/contributors)",
     author_email="transformers@huggingface.co",
     description="State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow",
-    # long_description=open("README.md", "r", encoding="utf-8").read(),
+    long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     keywords="NLP vision speech deep learning transformer pytorch tensorflow jax BERT GPT-2 Wav2Vec2 ViT",
     license="Apache 2.0 License",

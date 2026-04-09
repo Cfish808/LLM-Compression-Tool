@@ -1,49 +1,49 @@
 filelock
-huggingface-hub<1.0,>=0.16.4
+huggingface-hub<1.0,>=0.19.3
 numpy>=1.17
 packaging>=20.0
 pyyaml>=5.1
 regex!=2019.12.17
 requests
-tokenizers<0.15,>=0.14
-safetensors>=0.3.1
+tokenizers<0.20,>=0.19
+safetensors>=0.4.1
 tqdm>=4.27
 
 [accelerate]
-accelerate>=0.20.3
+accelerate>=0.21.0
 
 [agents]
 diffusers
-accelerate>=0.20.3
+accelerate>=0.21.0
 datasets!=2.5.0
-torch!=1.12.0,>=1.10
+torch
 sentencepiece!=0.1.92,>=0.1.91
 opencv-python
-Pillow<10.0.0
+Pillow<=15.0,>=10.0.1
 
 [all]
-tensorflow<2.15,>=2.6
+tensorflow<2.16,>=2.6
 onnxconverter-common
 tf2onnx
-tensorflow-text<2.15
+tensorflow-text<2.16
 keras-nlp>=0.3.1
-torch!=1.12.0,>=1.10
-accelerate>=0.20.3
+torch
+accelerate>=0.21.0
 jax<=0.4.13,>=0.4.1
 jaxlib<=0.4.13,>=0.4.1
 flax<=0.7.0,>=0.4.1
 optax<=0.1.4,>=0.0.8
 sentencepiece!=0.1.92,>=0.1.91
 protobuf
-tokenizers<0.15,>=0.14
+tokenizers<0.20,>=0.19
 torchaudio
 librosa
 pyctcdecode>=0.4.0
 phonemizer
 kenlm
-Pillow<10.0.0
+Pillow<=15.0,>=10.0.1
 optuna
-ray[tune]
+ray[tune]>=2.7.0
 sigopt
 timm
 torchvision
@@ -62,12 +62,12 @@ codecarbon==1.2.0
 
 [deepspeed]
 deepspeed>=0.9.3
-accelerate>=0.20.3
+accelerate>=0.21.0
 
 [deepspeed-testing]
 deepspeed>=0.9.3
-accelerate>=0.20.3
-pytest>=7.2.0
+accelerate>=0.21.0
+pytest<8.0.0,>=7.2.0
 pytest-xdist
 timeout-decorator
 parameterized
@@ -76,7 +76,7 @@ datasets!=2.5.0
 dill<0.3.5
 evaluate>=0.2.0
 pytest-timeout
-black~=23.1
+ruff==0.1.5
 sacrebleu<2.0.0,>=1.4.12
 rouge-score!=0.0.7,!=0.0.8,!=0.1,!=0.1.1
 nltk
@@ -87,41 +87,42 @@ sacremoses
 rjieba
 beautifulsoup4
 tensorboard
+pydantic
+sentencepiece!=0.1.92,>=0.1.91
 faiss-cpu
 cookiecutter==1.7.3
 optuna
-sentencepiece!=0.1.92,>=0.1.91
 
 [dev]
-tensorflow<2.15,>=2.6
+tensorflow<2.16,>=2.6
 onnxconverter-common
 tf2onnx
-tensorflow-text<2.15
+tensorflow-text<2.16
 keras-nlp>=0.3.1
-torch!=1.12.0,>=1.10
-accelerate>=0.20.3
+torch
+accelerate>=0.21.0
 jax<=0.4.13,>=0.4.1
 jaxlib<=0.4.13,>=0.4.1
 flax<=0.7.0,>=0.4.1
 optax<=0.1.4,>=0.0.8
 sentencepiece!=0.1.92,>=0.1.91
 protobuf
-tokenizers<0.15,>=0.14
+tokenizers<0.20,>=0.19
 torchaudio
 librosa
 pyctcdecode>=0.4.0
 phonemizer
 kenlm
-Pillow<10.0.0
+Pillow<=15.0,>=10.0.1
 optuna
-ray[tune]
+ray[tune]>=2.7.0
 sigopt
 timm
 torchvision
 codecarbon==1.2.0
 decord==0.6.0
 av==9.2.0
-pytest>=7.2.0
+pytest<8.0.0,>=7.2.0
 pytest-xdist
 timeout-decorator
 parameterized
@@ -130,7 +131,7 @@ datasets!=2.5.0
 dill<0.3.5
 evaluate>=0.2.0
 pytest-timeout
-black~=23.1
+ruff==0.1.5
 sacrebleu<2.0.0,>=1.4.12
 rouge-score!=0.0.7,!=0.0.8,!=0.1,!=0.1.1
 nltk
@@ -140,10 +141,10 @@ sacremoses
 rjieba
 beautifulsoup4
 tensorboard
+pydantic
 faiss-cpu
 cookiecutter==1.7.3
 isort>=5.5.4
-ruff<=0.0.259,>=0.0.241
 urllib3<2.0.0
 fugashi>=1.0
 ipadic<2.0,>=1.0.0
@@ -156,7 +157,7 @@ hf-doc-builder
 scikit-learn
 
 [dev-tensorflow]
-pytest>=7.2.0
+pytest<8.0.0,>=7.2.0
 pytest-xdist
 timeout-decorator
 parameterized
@@ -165,7 +166,7 @@ datasets!=2.5.0
 dill<0.3.5
 evaluate>=0.2.0
 pytest-timeout
-black~=23.1
+ruff==0.1.5
 sacrebleu<2.0.0,>=1.4.12
 rouge-score!=0.0.7,!=0.0.8,!=0.1,!=0.1.1
 nltk
@@ -176,18 +177,18 @@ sacremoses
 rjieba
 beautifulsoup4
 tensorboard
+pydantic
+sentencepiece!=0.1.92,>=0.1.91
 faiss-cpu
 cookiecutter==1.7.3
-tensorflow<2.15,>=2.6
+tensorflow<2.16,>=2.6
 onnxconverter-common
 tf2onnx
-tensorflow-text<2.15
+tensorflow-text<2.16
 keras-nlp>=0.3.1
-sentencepiece!=0.1.92,>=0.1.91
-tokenizers<0.15,>=0.14
-Pillow<10.0.0
+tokenizers<0.20,>=0.19
+Pillow<=15.0,>=10.0.1
 isort>=5.5.4
-ruff<=0.0.259,>=0.0.241
 urllib3<2.0.0
 hf-doc-builder
 scikit-learn
@@ -199,7 +200,7 @@ phonemizer
 kenlm
 
 [dev-torch]
-pytest>=7.2.0
+pytest<8.0.0,>=7.2.0
 pytest-xdist
 timeout-decorator
 parameterized
@@ -208,7 +209,7 @@ datasets!=2.5.0
 dill<0.3.5
 evaluate>=0.2.0
 pytest-timeout
-black~=23.1
+ruff==0.1.5
 sacrebleu<2.0.0,>=1.4.12
 rouge-score!=0.0.7,!=0.0.8,!=0.1,!=0.1.1
 nltk
@@ -219,26 +220,26 @@ sacremoses
 rjieba
 beautifulsoup4
 tensorboard
+pydantic
+sentencepiece!=0.1.92,>=0.1.91
 faiss-cpu
 cookiecutter==1.7.3
-torch!=1.12.0,>=1.10
-accelerate>=0.20.3
-sentencepiece!=0.1.92,>=0.1.91
-tokenizers<0.15,>=0.14
+torch
+accelerate>=0.21.0
+tokenizers<0.20,>=0.19
 torchaudio
 librosa
 pyctcdecode>=0.4.0
 phonemizer
 kenlm
-Pillow<10.0.0
+Pillow<=15.0,>=10.0.1
 optuna
-ray[tune]
+ray[tune]>=2.7.0
 sigopt
 timm
 torchvision
 codecarbon==1.2.0
 isort>=5.5.4
-ruff<=0.0.259,>=0.0.241
 urllib3<2.0.0
 fugashi>=1.0
 ipadic<2.0,>=1.0.0
@@ -253,28 +254,28 @@ onnxruntime>=1.4.0
 onnxruntime-tools>=1.4.2
 
 [docs]
-tensorflow<2.15,>=2.6
+tensorflow<2.16,>=2.6
 onnxconverter-common
 tf2onnx
-tensorflow-text<2.15
+tensorflow-text<2.16
 keras-nlp>=0.3.1
-torch!=1.12.0,>=1.10
-accelerate>=0.20.3
+torch
+accelerate>=0.21.0
 jax<=0.4.13,>=0.4.1
 jaxlib<=0.4.13,>=0.4.1
 flax<=0.7.0,>=0.4.1
 optax<=0.1.4,>=0.0.8
 sentencepiece!=0.1.92,>=0.1.91
 protobuf
-tokenizers<0.15,>=0.14
+tokenizers<0.20,>=0.19
 torchaudio
 librosa
 pyctcdecode>=0.4.0
 phonemizer
 kenlm
-Pillow<10.0.0
+Pillow<=15.0,>=10.0.1
 optuna
-ray[tune]
+ray[tune]>=2.7.0
 sigopt
 timm
 torchvision
@@ -303,7 +304,7 @@ ftfy
 
 [integrations]
 optuna
-ray[tune]
+ray[tune]>=2.7.0
 sigopt
 
 [ja]
@@ -319,7 +320,7 @@ rhoknp<1.3.1,>=1.1.0
 cookiecutter==1.7.3
 
 [natten]
-natten>=0.14.6
+natten<0.15.0,>=0.14.6
 
 [onnx]
 onnxconverter-common
@@ -335,16 +336,15 @@ onnxruntime-tools>=1.4.2
 optuna
 
 [quality]
-black~=23.1
 datasets!=2.5.0
 isort>=5.5.4
-ruff<=0.0.259,>=0.0.241
+ruff==0.1.5
 GitPython<3.1.19
 hf-doc-builder>=0.3.0
 urllib3<2.0.0
 
 [ray]
-ray[tune]
+ray[tune]>=2.7.0
 
 [retrieval]
 faiss-cpu
@@ -358,7 +358,7 @@ sentencepiece!=0.1.92,>=0.1.91
 protobuf
 
 [serving]
-pydantic<2
+pydantic
 uvicorn
 fastapi
 starlette
@@ -377,7 +377,7 @@ phonemizer
 kenlm
 
 [testing]
-pytest>=7.2.0
+pytest<8.0.0,>=7.2.0
 pytest-xdist
 timeout-decorator
 parameterized
@@ -386,7 +386,7 @@ datasets!=2.5.0
 dill<0.3.5
 evaluate>=0.2.0
 pytest-timeout
-black~=23.1
+ruff==0.1.5
 sacrebleu<2.0.0,>=1.4.12
 rouge-score!=0.0.7,!=0.0.8,!=0.1,!=0.1.1
 nltk
@@ -397,21 +397,23 @@ sacremoses
 rjieba
 beautifulsoup4
 tensorboard
+pydantic
+sentencepiece!=0.1.92,>=0.1.91
 faiss-cpu
 cookiecutter==1.7.3
 
 [tf]
-tensorflow<2.15,>=2.6
+tensorflow<2.16,>=2.6
 onnxconverter-common
 tf2onnx
-tensorflow-text<2.15
+tensorflow-text<2.16
 keras-nlp>=0.3.1
 
 [tf-cpu]
-tensorflow-cpu<2.15,>=2.6
+tensorflow-cpu<2.16,>=2.6
 onnxconverter-common
 tf2onnx
-tensorflow-text<2.15
+tensorflow-text<2.16
 keras-nlp>=0.3.1
 
 [tf-speech]
@@ -424,11 +426,11 @@ kenlm
 timm
 
 [tokenizers]
-tokenizers<0.15,>=0.14
+tokenizers<0.20,>=0.19
 
 [torch]
-torch!=1.12.0,>=1.10
-accelerate>=0.20.3
+torch
+accelerate>=0.21.0
 
 [torch-speech]
 torchaudio
@@ -439,11 +441,11 @@ kenlm
 
 [torch-vision]
 torchvision
-Pillow<10.0.0
+Pillow<=15.0,>=10.0.1
 
 [torchhub]
 filelock
-huggingface-hub<1.0,>=0.16.4
+huggingface-hub<1.0,>=0.19.3
 importlib_metadata
 numpy>=1.17
 packaging>=20.0
@@ -451,8 +453,8 @@ protobuf
 regex!=2019.12.17
 requests
 sentencepiece!=0.1.92,>=0.1.91
-torch!=1.12.0,>=1.10
-tokenizers<0.15,>=0.14
+torch
+tokenizers<0.20,>=0.19
 tqdm>=4.27
 
 [video]
@@ -460,4 +462,4 @@ decord==0.6.0
 av==9.2.0
 
 [vision]
-Pillow<10.0.0
+Pillow<=15.0,>=10.0.1
