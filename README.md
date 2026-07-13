@@ -1,7 +1,7 @@
 # COSQuant
 
 
-![](assets/system.jpg)
+![](assets/system.png)
 
 We introduce a versatile quantization toolkit COSQuant that integrates a diverse array of quantization techniques and supports the flexible combination of multiple model compression strategies.
 
@@ -22,9 +22,6 @@ We introduce a versatile quantization toolkit COSQuant that integrates a diverse
     - [Quantization](#quantization)
     - [Evaluation](#evaluation)
     - [Deployment](#deployment)
-  - [OOD Benchmark Results](#ood-benchmark-results)
-    - [Perplexity (PPL) of the LLaMA-2-7B Model](#perplexity-ppl-of-the-llama-2-7b-model)
-    - [Todo](#todo)
   - [Cite](#cite)
 
 
@@ -154,7 +151,7 @@ quant:
 
 save: /home/yejinyu/llama2_7b/output/llama27b_miom_2
 ```
-
+*Note that all path-related parameters within the configuration files must be updated to match the user's local environment.
 ### Evaluation 
 Below is an example of how to evaluate a quantized model on various datasets. 
 ```
@@ -184,78 +181,6 @@ deployment:
   backend: vllm
 ```
 
-## OOD Benchmark Results
-Below are some test results obtained from the Out-of-Distribution (OOD) benchmark evaluation:
-
-### Perplexity (PPL) of the LLaMA-2-7B Model
-
-<table>
-  <thead>
-    <tr>
-      <th></th>
-      <th>bit-width</th>
-      <th>wikitext2</th>
-      <th>c4</th>
-      <th></th>
-      <th>bit-width</th>
-      <th>wikitext2</th>
-      <th>c4</th>
-      <th></th>
-      <th>bit-width</th>
-      <th>wikitext2</th>
-      <th>c4</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td rowspan="3">COSQuant AWQ</td>
-      <td>W2A16</td>
-      <td>206385.3</td>
-      <td>150178.06</td>
-      <td rowspan="3">AWQ</td>
-      <td>W2A16</td>
-      <td>222486.37</td>
-      <td>168183.6</td>
-      <td rowspan="3">LLMC AWQ</td>
-      <td>W2A16</td>
-      <td>nan</td>
-      <td>8895.39</td>
-    </tr>
-    <tr>
-      <td>W3A16</td>
-      <td>6.54</td>
-      <td>8.72</td>
-      <td>W3A16</td>
-      <td>6.25</td>
-      <td>8.23</td>
-      <td>W3A16</td>
-      <td>6.67</td>
-      <td>8.88</td>
-    </tr>
-    <tr>
-      <td>W4A16</td>
-      <td>5.77</td>
-      <td>7.62</td>
-      <td>W4A16</td>
-      <td>5.6</td>
-      <td>7.39</td>
-      <td>W4A16</td>
-      <td>5.66</td>
-      <td>7.5</td>
-    </tr>
-  </tbody>
-</table>
-
-
-### Todo
-
-- Inference Efficiency Experiments
-
-- Ablation Study under Optimized Mode (self_gen/COLA)
-
-- Experiments from LLaMA-2 7B to larger-scale foundation models.
-
-- Keep improving and refining the tool's ease of use.
 
 ## Cite
 If you found this work useful, please consider citing our work:
