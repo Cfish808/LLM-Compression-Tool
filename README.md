@@ -5,7 +5,7 @@
 
 We introduce a versatile quantization toolkit COSQuant that integrates a diverse array of quantization techniques and supports the flexible combination of multiple model compression strategies.
 
-
+Click the image below to access the video demonstration.
 [![Demo Video](https://img.youtube.com/vi/Nq45ywkZwG4/maxresdefault.jpg)](https://www.youtube.com/watch?v=Nq45ywkZwG4)
 
 ## Table of Contents
