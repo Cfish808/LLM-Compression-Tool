@@ -6,9 +6,7 @@
 We introduce a versatile quantization toolkit COSQuant that integrates a diverse array of quantization techniques and supports the flexible combination of multiple model compression strategies.
 
 
-<video width="100%" controls autoplay muted loop>
-  <source src="[assets/video.mp4](https://github.com/Cfish808/LLM-Compression-Tool/raw/refs/heads/master/assets/video.mp4)" type="video/mp4">
-</video>
+[![Demo Video](https://img.youtube.com/vi/Nq45ywkZwG4/maxresdefault.jpg)](https://www.youtube.com/watch?v=Nq45ywkZwG4)
 
 ## Table of Contents
 
