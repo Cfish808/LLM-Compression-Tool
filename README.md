@@ -7,7 +7,7 @@ We introduce a versatile quantization toolkit COSQuant that integrates a diverse
 
 
 <video width="100%" controls autoplay muted loop>
-  <source src="assets/video.mp4" type="video/mp4">
+  <source src="[assets/video.mp4](https://github.com/Cfish808/LLM-Compression-Tool/raw/refs/heads/master/assets/video.mp4)" type="video/mp4">
 </video>
 
 ## Table of Contents
