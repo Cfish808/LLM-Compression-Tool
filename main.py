@@ -164,11 +164,11 @@ def main(config):
     if config.get("eval", False):
         if new_model is None:
             config.base_model.path = config.save
-            if config.quant and config.quant.method == "onebit":
+            if 'quant' in config and config.quant.method == "onebit":
                 from transformers import BitLlamaForCausalLM, AutoTokenizer
                 new_model = BitLlamaForCausalLM.from_pretrained(config.base_model.path)
                 tokenizer = AutoTokenizer.from_pretrained(config.base_model.path, use_fast=False)
-            elif config.quant and config.quant.method == "qat-llm":
+            elif 'quant' in config and config.quant.method == "qat-llm":
                 from transformers import QatLlamaForCausalLM, AutoTokenizer
                 new_model = QatLlamaForCausalLM.from_pretrained(config.base_model.path)
                 tokenizer = AutoTokenizer.from_pretrained(config.base_model.path, use_fast=False)
