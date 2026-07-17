@@ -1,6 +1,6 @@
 base_model:
     type: Llama
-    path: /netcache/huggingface/llama-2-7b-hf/
+    path: /your path/llama-2-7b-hf/
     torch_dtype: torch.float16
     tokenizer_mode: fast
     device_map: auto
@@ -31,7 +31,7 @@ quant:
       nsamples: 128
       seqlen: 2048
       download: False
-      path: /netcache/huggingface/c4_local/c4-train.00000-of-01024.json.gz
+      path: /your path/c4_local/c4-train.00000-of-01024.json.gz
       batch_size: 32
       split: train
       seed: 42
@@ -52,4 +52,4 @@ eval:
       nsamples: all
     }
   ]
-save: /home/yejinyu/llama2_7b/output/llama27b_miom_2
+save: /your path/llama27b_3bit

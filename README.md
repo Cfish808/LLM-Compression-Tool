@@ -109,6 +109,11 @@ We introduces COSQuant, a versatile and modular quantization toolkit designed t
    ```
    pip install -r requirements.txt
    ```
+   
+   To apply quantization to the Qwen3 model family, the following procedures are executed:
+   ```
+   pip install --upgrade transformers==4.51.3
+   ```
 
 ## Usage
 ### Quick Start
