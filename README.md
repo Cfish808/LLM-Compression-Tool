@@ -8,6 +8,12 @@ We introduce a versatile quantization toolkit COSQuant that integrates a diverse
 Click the image below to access the video demonstration.
 [![Demo Video](https://img.youtube.com/vi/Nq45ywkZwG4/maxresdefault.jpg)](https://www.youtube.com/watch?v=Nq45ywkZwG4)
 
+<a href="https://www.youtube.com/watch?v=Nq45ywkZwG4">
+  <img src="https://img.youtube.com/vi/Nq45ywkZwG4/maxresdefault.jpg" 
+       width="600">
+</a>
+
+
 ## Table of Contents
 
 - [COSQuant](#cosquant)
